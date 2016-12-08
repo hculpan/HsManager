@@ -22,9 +22,9 @@ public class HsMgrModel {
     public StringProperty currentSegment = new SimpleStringProperty("11");
 
     public HsMgrModel() {
-        Combatant c = Combatant.createCombatant("Pulsar", 20, 18, 15, 70, 15, 9, 15, 15, 9);
+        Combatant c = Combatant.createCombatant("Pulsar", 20, 18, 15, 15, 70, 9, 15, 15, 9);
         allCombatants.add(c);
-        c = Combatant.createCombatant("Night Shadow", 45, 18, 50, 100, 20, 6, 35, 35, 9);
+        c = Combatant.createCombatant("Night Shadow", 45, 18, 50, 20, 100, 6, 35, 35, 9);
         allCombatants.add(c);
 
         addActiveListChangeListener();
