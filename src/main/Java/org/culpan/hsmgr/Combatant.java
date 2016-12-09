@@ -29,18 +29,12 @@ public class Combatant extends Person {
         this.currentBody = currentBody;
     }
 
-    public boolean hasActed() {
-        return acted.getValue();
-    }
+    BooleanProperty acted = new SimpleBooleanProperty(false);
 
-    public void setActed(boolean acted) {
-        this.acted.setValue(acted);
-    }
-
-    BooleanProperty acted = new SimpleBooleanProperty();
+    BooleanProperty held = new SimpleBooleanProperty(false);
 
     public static Callback<Combatant, Observable[]> extractor() {
-        return param -> new Observable[]{param.acted};
+        return param -> new Observable[]{param.acted, param.held};
     }
 
     static public Combatant createCombatant(String name, int con, int dex, int rec,

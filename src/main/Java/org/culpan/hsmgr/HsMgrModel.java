@@ -35,13 +35,17 @@ public class HsMgrModel {
     public void addActiveListChangeListener() {
         currentSegment.addListener((Observable o) -> {
             int currSeg = Integer.parseInt(currentSegment.getValue());
-            System.out.printf("Change listener called, segment = %d\n", currSeg);
 
             List<Combatant> active = new ArrayList<>();
             for (Combatant c : allCombatants) {
                 if (c.isInPhase(currSeg)) {
                     active.add(c);
                     c.acted.setValue(false);
+                    c.held.setValue(false);
+                } else if (!c.acted.getValue()) {
+                    active.add(c);
+                    c.acted.setValue(false);
+                    c.held.setValue(true);
                 }
             }
 
@@ -66,5 +70,17 @@ public class HsMgrModel {
 
     public void onQuit() {
         System.exit(0);
+    }
+
+    public void reset() {
+        currentSegment.setValue("12");
+        currentTurn.setValue("1");
+
+        for (Combatant c : allCombatants) {
+            c.acted.setValue(false);
+            c.held.setValue(false);
+            c.setCurrentBody(c.getBody());
+            c.setCurrentStun(c.getStun());
+        }
     }
 }
