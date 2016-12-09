@@ -41,6 +41,7 @@ public class HsMgrModel {
             for (Combatant c : allCombatants) {
                 if (c.isInPhase(currSeg)) {
                     active.add(c);
+                    c.acted.setValue(false);
                 }
             }
 
