@@ -7,7 +7,9 @@ import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.List;
+import java.util.Random;
 
 /**
  * Created by USUCUHA on 12/8/2016.
@@ -22,36 +24,35 @@ public class HsMgrModel {
     public StringProperty currentSegment = new SimpleStringProperty("11");
 
     public HsMgrModel() {
-        Combatant c = Combatant.createCombatant("Pulsar", 20, 18, 15, 15, 70, 9, 15, 15, 9);
-        allCombatants.add(c);
-        c = Combatant.createCombatant("Night Shadow", 45, 18, 50, 20, 100, 6, 35, 35, 9);
-        allCombatants.add(c);
-
         addActiveListChangeListener();
-
         onNext();
     }
 
-    public void addActiveListChangeListener() {
-        currentSegment.addListener((Observable o) -> {
-            int currSeg = Integer.parseInt(currentSegment.getValue());
+    protected void updateActiveList() {
+        int currSeg = Integer.parseInt(currentSegment.getValue());
 
-            List<Combatant> active = new ArrayList<>();
-            for (Combatant c : allCombatants) {
-                if (c.isInPhase(currSeg)) {
-                    active.add(c);
-                    c.acted.setValue(false);
-                    c.held.setValue(false);
-                } else if (!c.acted.getValue()) {
-                    active.add(c);
-                    c.acted.setValue(false);
-                    c.held.setValue(true);
-                }
+        List<Combatant> active = new ArrayList<>();
+        for (Combatant c : allCombatants) {
+            if (c.isInPhase(currSeg)) {
+                active.add(c);
+                c.acted.setValue(false);
+                c.held.setValue(false);
+            } else if (!c.acted.getValue()) {
+                active.add(c);
+                c.acted.setValue(false);
+                c.held.setValue(true);
             }
+        }
+        active.sort((o1, o2) -> o1.actsBefore(o2));
 
-            currentActive.clear();
-            currentActive.addAll(active);
-        });
+        currentActive.clear();
+        currentActive.addAll(active);
+    }
+
+    public void addActiveListChangeListener() {
+        currentSegment.addListener((Observable o) ->  updateActiveList());
+
+        allCombatants.addListener((Observable o) -> updateActiveList());
     }
 
     public void onNext() {
@@ -79,8 +80,19 @@ public class HsMgrModel {
         for (Combatant c : allCombatants) {
             c.acted.setValue(false);
             c.held.setValue(false);
-            c.setCurrentBody(c.getBody());
-            c.setCurrentStun(c.getStun());
+            c.currentBody.setValue(c.getBody());
+            c.currentStun.setValue(c.getStun());
         }
+    }
+
+    public Combatant getCombatantByName(String name) {
+        Combatant result = null;
+        for (Combatant c : allCombatants) {
+            if (c.getName().equalsIgnoreCase(name)) {
+                result = c;
+                break;
+            }
+        }
+        return result;
     }
 }

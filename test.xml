@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<combat>
+    <combatant>
+        <name>Night Shadow</name>
+        <player>false</player>
+        <con>45</con>
+        <dex>18</dex>
+        <rec>50</rec>
+        <spd>6</spd>
+        <stun>100</stun>
+        <body>20</body>
+        <pd>35</pd>
+        <ed>35</ed>
+        <dcv>9</dcv>
+    </combatant>
+    <combatant>
+        <name>Arachnid</name>
+        <player>true</player>
+        <con>25</con>
+        <dex>15</dex>
+        <rec>10</rec>
+        <spd>6</spd>
+        <stun>60</stun>
+        <body>20</body>
+        <pd>25</pd>
+        <ed>25</ed>
+        <dcv>17</dcv>
+    </combatant>
+    <combatant>
+        <name>Pulsar</name>
+        <player>true</player>
+        <con>20</con>
+        <dex>18</dex>
+        <rec>15</rec>
+        <spd>9</spd>
+        <stun>70</stun>
+        <body>15</body>
+        <pd>15</pd>
+        <ed>15</ed>
+        <dcv>9</dcv>
+    </combatant>
+</combat>
