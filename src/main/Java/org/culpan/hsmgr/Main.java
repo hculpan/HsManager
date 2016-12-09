@@ -1,6 +1,8 @@
 package org.culpan.hsmgr;
 
 import javafx.application.Application;
+import javafx.beans.value.ChangeListener;
+import javafx.event.EventHandler;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.scene.Scene;
@@ -8,6 +10,8 @@ import javafx.scene.canvas.Canvas;
 import javafx.scene.canvas.GraphicsContext;
 import javafx.scene.control.*;
 import javafx.scene.control.cell.PropertyValueFactory;
+import javafx.scene.image.Image;
+import javafx.scene.input.MouseEvent;
 import javafx.scene.layout.BorderPane;
 import javafx.scene.layout.HBox;
 import javafx.scene.text.Text;
@@ -17,16 +21,25 @@ public class Main extends Application {
 
     static protected HsMgrModel hsMgrModel = new HsMgrModel();
 
+    static Image actedImage = new Image(Main.class.getResourceAsStream("/acted.png"));
+
+    static Image notActedImage = new Image(Main.class.getResourceAsStream("/not_acted.png"));
+
     static class CombatantCell extends ListCell<Combatant> {
         @Override
         public void updateItem(Combatant item, boolean empty) {
             super.updateItem(item, empty);
 
             if (item != null) {
-                Canvas canvas = new Canvas(100, 20);
+                Canvas canvas = new Canvas(240, 35);
                 if (item.isInPhase(Integer.parseInt(hsMgrModel.currentSegment.getValue()))) {
                     GraphicsContext gc = canvas.getGraphicsContext2D();
-                    gc.strokeText(item.getName(), 5, 15);
+                    gc.strokeText(item.getName(), 35, 25);
+                    if (item.hasActed()) {
+                        gc.drawImage(actedImage, 0, 3);
+                    } else {
+                        gc.drawImage(notActedImage, 0, 3);
+                    }
                 }
 
                 setGraphic(canvas);
@@ -66,7 +79,12 @@ public class Main extends Application {
         topBox.setPadding(new Insets(15, 12, 15, 12));
         topBox.setAlignment(Pos.CENTER);
         topBox.setSpacing(10);
+
         ListView<Combatant> active = new ListView<>(hsMgrModel.currentActive);
+        active.setPrefSize(260, 0);
+        active.setOnMouseClicked(event -> {
+            active.getSelectionModel().getSelectedItem().acted.setValue(!active.getSelectionModel().getSelectedItem().acted.getValue());
+        });
 
         TableView tableView = buildTableView();
 
@@ -75,8 +93,11 @@ public class Main extends Application {
         root.setBottom(buttonGroup);
         root.setTop(topBox);
 
-        active.setCellFactory(list -> new CombatantCell()
-        );
+        active.setCellFactory(list -> {
+            CombatantCell result = new CombatantCell();
+            result.setStyle("-fx-background-color: white;");
+            return result;
+        });
 
         primaryStage.show();
     }

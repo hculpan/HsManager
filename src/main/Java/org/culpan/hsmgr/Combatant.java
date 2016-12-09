@@ -1,5 +1,10 @@
 package org.culpan.hsmgr;
 
+import javafx.beans.Observable;
+import javafx.beans.property.BooleanProperty;
+import javafx.beans.property.SimpleBooleanProperty;
+import javafx.util.Callback;
+
 /**
  * Created by USUCUHA on 12/8/2016.
  */
@@ -7,8 +12,6 @@ public class Combatant extends Person {
     volatile int currentStun;
 
     volatile int currentBody;
-
-    volatile boolean acted;
 
     public int getCurrentStun() {
         return currentStun;
@@ -26,12 +29,18 @@ public class Combatant extends Person {
         this.currentBody = currentBody;
     }
 
-    public boolean isActed() {
-        return acted;
+    public boolean hasActed() {
+        return acted.getValue();
     }
 
     public void setActed(boolean acted) {
-        this.acted = acted;
+        this.acted.setValue(acted);
+    }
+
+    BooleanProperty acted = new SimpleBooleanProperty();
+
+    public static Callback<Combatant, Observable[]> extractor() {
+        return param -> new Observable[]{param.acted};
     }
 
     static public Combatant createCombatant(String name, int con, int dex, int rec,

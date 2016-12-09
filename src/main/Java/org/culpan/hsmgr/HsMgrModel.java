@@ -13,7 +13,7 @@ import java.util.List;
  * Created by USUCUHA on 12/8/2016.
  */
 public class HsMgrModel {
-    public ObservableList<Combatant> currentActive = FXCollections.observableArrayList();
+    public ObservableList<Combatant> currentActive = FXCollections.observableArrayList(Combatant.extractor());
 
     public ObservableList<Combatant> allCombatants = FXCollections.observableArrayList();
 
