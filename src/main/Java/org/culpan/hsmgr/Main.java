@@ -2,6 +2,7 @@ package org.culpan.hsmgr;
 
 import javafx.application.Application;
 import javafx.application.Platform;
+import javafx.beans.property.IntegerProperty;
 import javafx.collections.ObservableList;
 import javafx.geometry.Insets;
 import javafx.geometry.Orientation;
@@ -111,11 +112,19 @@ public class Main extends Application {
         Menu actionsMenu = new Menu("Actions");
         MenuItem damagePersonItem = new MenuItem("Damage Person");
         damagePersonItem.setOnAction(event -> damagePerson());
-        actionsMenu.getItems().addAll(damagePersonItem);
+        MenuItem pushAttackItem = new MenuItem("Push Attack");
+        pushAttackItem.setOnAction(event -> pushAttack(selectedCombatant));
+        actionsMenu.getItems().addAll(damagePersonItem, pushAttackItem);
 
         result.getMenus().addAll(fileMenu, editMenu, actionsMenu);
 
         return result;
+    }
+
+    private void pushAttack(Combatant selectedCombatant) {
+        if (selectedCombatant == null) return;
+
+        selectedCombatant.damage(10, 00);
     }
 
     private void damagePerson() {
@@ -227,8 +236,6 @@ public class Main extends Application {
                     }
                     hsMgrModel.allCombatants.addAll(c.getCombatants());
                 }
-                //System.out.println(e.getId()+" "+e.getName()+" "+e.getSalary());
-
             } catch (JAXBException e) {
                 e.printStackTrace();
             }
@@ -586,9 +593,9 @@ public class Main extends Application {
     }
 
     protected TableView buildTableView() {
-        TableView result = new TableView(hsMgrModel.allCombatants);
+        TableView<Combatant> result = new TableView(hsMgrModel.allCombatants);
 
-        TableColumn name = new TableColumn("Name");
+        TableColumn<Combatant, String> name = new TableColumn<>("Name");
         name.setCellValueFactory(new PropertyValueFactory("name"));
         name.setPrefWidth(240);
         TableColumn rec = new TableColumn("Rec");
@@ -603,18 +610,40 @@ public class Main extends Application {
         stun.setCellValueFactory(new PropertyValueFactory("stun"));
         stun.setPrefWidth(75);
         stun.setStyle( "-fx-alignment: CENTER;");
-        TableColumn currStun = new TableColumn("Curr Stun");
-        currStun.setCellValueFactory(new PropertyValueFactory("currentStun"));
+        TableColumn<Combatant, Integer> currStun = new TableColumn<>("Curr Stun");
+        currStun.setCellValueFactory(cellData -> cellData.getValue().getCurrentStunProperty().asObject());
         currStun.setPrefWidth(75);
         currStun.setStyle( "-fx-alignment: CENTER;");
         TableColumn body = new TableColumn("Body");
         body.setCellValueFactory(new PropertyValueFactory("body"));
         body.setPrefWidth(75);
         body.setStyle( "-fx-alignment: CENTER;");
-        TableColumn currBody = new TableColumn("Curr Body");
-        currBody.setCellValueFactory(new PropertyValueFactory("currentBody"));
+        TableColumn<Combatant, Integer> currBody = new TableColumn<>("Curr Body");
+        currBody.setCellValueFactory(cellData -> cellData.getValue().getCurrentBodyProperty().asObject());
         currBody.setPrefWidth(75);
         currBody.setStyle( "-fx-alignment: CENTER;");
+
+/*        name.setCellFactory(column ->
+            new TableCell<Combatant, String>() {
+                @Override
+                protected void updateItem(String item, boolean empty) {
+                    super.updateItem(item, empty);
+
+                    setText(empty ? "" : getItem().toString());
+                    setGraphic(null);
+
+                    TableRow<Combatant> currentRow = getTableRow();
+
+                    if (!isEmpty()) {
+
+                        if(currentRow.getItem().currentStun.getValue() < 0)
+                            currentRow.setStyle("-fx-background-color:red");
+                        else
+                            currentRow.setStyle("-fx-background-color:white");
+                    }
+
+                }
+        });*/
 
         result.getColumns().addAll(name, con, rec, stun, currStun, body, currBody);
 

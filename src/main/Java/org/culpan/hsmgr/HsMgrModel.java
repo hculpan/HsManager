@@ -15,7 +15,7 @@ import java.util.Random;
  * Created by USUCUHA on 12/8/2016.
  */
 public class HsMgrModel {
-    public ObservableList<Combatant> currentActive = FXCollections.observableArrayList(Combatant.extractor());
+    public ObservableList<Combatant> currentActive = FXCollections.observableArrayList(Combatant.listExtractor());
 
     public ObservableList<Combatant> allCombatants = FXCollections.observableArrayList();
 
@@ -29,6 +29,7 @@ public class HsMgrModel {
     }
 
     protected void updateActiveList() {
+        System.out.println("updateActiveList called");
         int currSeg = Integer.parseInt(currentSegment.getValue());
 
         List<Combatant> active = new ArrayList<>();

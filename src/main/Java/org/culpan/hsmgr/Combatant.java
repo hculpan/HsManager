@@ -59,9 +59,11 @@ public class Combatant {
 
     BooleanProperty held = new SimpleBooleanProperty(false);
 
-    IntegerProperty currentStun = new SimpleIntegerProperty();
+    BooleanProperty unconscious = new SimpleBooleanProperty(false);
 
-    IntegerProperty currentBody = new SimpleIntegerProperty();
+    final IntegerProperty currentStun = new SimpleIntegerProperty();
+
+    final IntegerProperty currentBody = new SimpleIntegerProperty();
 
     public int getCurrentStun() {
         return currentStun.getValue();
@@ -69,6 +71,14 @@ public class Combatant {
 
     public int getCurrentBody() {
         return currentBody.getValue();
+    }
+
+    public IntegerProperty getCurrentStunProperty() {
+        return currentStun;
+    }
+
+    public IntegerProperty getCurrentBodyProperty() {
+        return currentBody;
     }
 
     @XmlElement
@@ -184,8 +194,12 @@ public class Combatant {
         return false;
     }
 
-    public static Callback<Combatant, Observable[]> extractor() {
-        return param -> new Observable[]{param.acted, param.held, param.currentStun, param.currentBody};
+    public static Callback<Combatant, Observable[]> listExtractor() {
+        return param -> new Observable[]{param.acted, param.held};
+    }
+
+    public static Callback<Combatant, Observable[]> tableExtractor() {
+        return param -> new Observable[]{param.currentStun, param.currentBody};
     }
 
     static public Combatant createCombatant(String name, int con, int dex, int rec,
@@ -265,5 +279,15 @@ public class Combatant {
         }
 
         return 0;
+    }
+
+    public void damage(int stun, int body) {
+        this.currentStun.setValue(this.currentStun.getValue() - stun);
+        this.unconscious.setValue(this.currentStun.getValue() <= 0);
+        this.currentBody.setValue(this.currentBody.getValue() - body);
+    }
+
+    public void heal(int stun, int body) {
+        damage(stun * -1, body * -1);
     }
 }
