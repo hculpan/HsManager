@@ -1,10 +1,7 @@
 package org.culpan.hsmgr;
 
 import javafx.beans.Observable;
-import javafx.beans.property.BooleanProperty;
-import javafx.beans.property.IntegerProperty;
-import javafx.beans.property.SimpleBooleanProperty;
-import javafx.beans.property.SimpleIntegerProperty;
+import javafx.beans.property.*;
 import javafx.util.Callback;
 
 import javax.xml.bind.annotation.XmlElement;
@@ -17,6 +14,8 @@ import javax.xml.bind.annotation.XmlType;
 @XmlRootElement
 @XmlType(propOrder={"name", "player", "con", "dex", "rec", "spd", "stun", "body", "pd", "ed", "dcv"})
 public class Combatant {
+    public enum Status { unacted, heldAction, acted, conStunned, unconscious, dead };
+
     public final static int[][] PHASES = {
             {},
             { 7 },
@@ -55,15 +54,11 @@ public class Combatant {
 
     boolean player;
 
-    BooleanProperty acted = new SimpleBooleanProperty(false);
-
-    BooleanProperty held = new SimpleBooleanProperty(false);
-
-    BooleanProperty unconscious = new SimpleBooleanProperty(false);
-
     final IntegerProperty currentStun = new SimpleIntegerProperty();
 
     final IntegerProperty currentBody = new SimpleIntegerProperty();
+
+    final ObjectProperty<Status> status = new SimpleObjectProperty<>();
 
     public int getCurrentStun() {
         return currentStun.getValue();
@@ -73,6 +68,8 @@ public class Combatant {
         return currentBody.getValue();
     }
 
+    public Status getStatus() { return status.get(); }
+
     public IntegerProperty getCurrentStunProperty() {
         return currentStun;
     }
@@ -80,6 +77,8 @@ public class Combatant {
     public IntegerProperty getCurrentBodyProperty() {
         return currentBody;
     }
+
+    public ObjectProperty<Status> getStatusProperty() { return status; }
 
     @XmlElement
     public String getName() {
@@ -180,6 +179,12 @@ public class Combatant {
         this.player = player;
     }
 
+    public boolean hasHeldAction() { return this.status.get().equals(Status.heldAction); }
+
+    public boolean hasActed() { return this.status.get().equals(Status.acted); }
+
+    public boolean hasNotActed() { return this.status.get().equals(Status.unacted); }
+
     public int[] getPhases() {
         return PHASES[getSpd()];
     }
@@ -195,7 +200,7 @@ public class Combatant {
     }
 
     public static Callback<Combatant, Observable[]> listExtractor() {
-        return param -> new Observable[]{param.acted, param.held};
+        return param -> new Observable[]{param.status};
     }
 
     public static Callback<Combatant, Observable[]> tableExtractor() {
@@ -212,6 +217,8 @@ public class Combatant {
                                             int body, int stun, int spd, int pd, int ed,
                                             int dcv, boolean player) {
         Combatant c = new Combatant();
+        c.status.setValue(Status.unacted);
+
         c.name = name;
         c.con = con;
         c.dex = dex;
@@ -232,8 +239,7 @@ public class Combatant {
     public void reset() {
         currentBody.setValue(getBody());
         currentStun.setValue(getStun());
-        acted.setValue(false);
-        held.setValue(false);
+        status.setValue(Status.unacted);
     }
 
     public Combatant clone() {
@@ -250,40 +256,57 @@ public class Combatant {
         result.setPlayer(this.isPlayer());
         result.setPd(this.getPd());
         result.setEd(this.getEd());
-        result.acted.setValue(this.acted.getValue());
-        result.held.setValue(this.held.getValue());
+        result.status.set(this.status.get());
         result.currentBody.setValue(this.currentBody.getValue());
         result.currentStun.setValue(this.currentStun.getValue());
 
         return result;
     }
 
+    /**
+     * Returns -1 if this acts before the specified combatant; or
+     * returns 1 if specified combatant acts before this.
+     * @param c
+     * @return
+     */
     public int actsBefore(Combatant c) {
-        if (this.getDex() > c.getDex()) {
-            return -1;
-        } else if (this.getDex() < c.getDex()) {
-            return 1;
+        int result = 0;
+
+        if (!this.getStatus().equals(c.getStatus())) {
+            if (this.getStatus().ordinal() < c.getStatus().ordinal()) {
+                result = -1;
+            } else {
+                result = 1;
+            }
         } else {
-            DiceRoller diceRoller = new DiceRoller();
-            int n1 = diceRoller.rollTotal(1, 6);
-            int n2 = diceRoller.rollTotal(1, 6);
-            do {
-                if (n1 > n2) {
-                    return -1;
-                } else if (n1 < n2) {
-                    return 1;
-                }
-                n1 = diceRoller.rollTotal(1, 6);
-                n2 = diceRoller.rollTotal(1, 6);
-            } while (n1 == n2);
+            if (this.getDex() > c.getDex()) {
+                result = -1;
+            } else if (this.getDex() < c.getDex()) {
+                result = 1;
+            } else {
+                DiceRoller diceRoller = new DiceRoller();
+                int n1 = diceRoller.rollTotal(1, 6);
+                int n2 = diceRoller.rollTotal(1, 6);
+                do {
+                    if (n1 > n2) {
+                        result = -1;
+                    } else if (n1 < n2) {
+                        result = 1;
+                    }
+                    n1 = diceRoller.rollTotal(1, 6);
+                    n2 = diceRoller.rollTotal(1, 6);
+                } while (n1 == n2);
+            }
         }
 
-        return 0;
+        return result;
     }
 
     public void damage(int stun, int body) {
         this.currentStun.setValue(this.currentStun.getValue() - stun);
-        this.unconscious.setValue(this.currentStun.getValue() <= 0);
+        if (currentStun.get() <= 0) {
+            status.set(Status.unconscious);
+        }
         this.currentBody.setValue(this.currentBody.getValue() - body);
     }
 

@@ -23,6 +23,8 @@ public class HsMgrModel {
 
     public StringProperty currentSegment = new SimpleStringProperty("11");
 
+    protected boolean startingNextPhase = true;
+
     public HsMgrModel() {
         addActiveListChangeListener();
         onNext();
@@ -36,14 +38,14 @@ public class HsMgrModel {
         for (Combatant c : allCombatants) {
             if (c.isInPhase(currSeg)) {
                 active.add(c);
-                c.acted.setValue(false);
-                c.held.setValue(false);
-            } else if (!c.acted.getValue()) {
+                if (startingNextPhase && (c.hasActed() || c.hasHeldAction())) {
+                    c.status.set(Combatant.Status.unacted);
+                }
+            } else if (c.hasHeldAction()) {
                 active.add(c);
-                c.acted.setValue(false);
-                c.held.setValue(true);
             }
         }
+        startingNextPhase = false;
         active.sort((o1, o2) -> o1.actsBefore(o2));
 
         currentActive.clear();
@@ -59,6 +61,8 @@ public class HsMgrModel {
     public void onNext() {
         int currSeg = Integer.parseInt(currentSegment.getValue());
         int currTurn = Integer.parseInt(currentTurn.getValue());
+
+        startingNextPhase = true;
 
         currSeg++;
         if (currSeg > 12) {
@@ -79,11 +83,12 @@ public class HsMgrModel {
         currentTurn.setValue("1");
 
         for (Combatant c : allCombatants) {
-            c.acted.setValue(false);
-            c.held.setValue(false);
+            c.status.set(Combatant.Status.unacted);
             c.currentBody.setValue(c.getBody());
             c.currentStun.setValue(c.getStun());
         }
+
+        updateActiveList();
     }
 
     public Combatant getCombatantByName(String name) {
@@ -95,5 +100,23 @@ public class HsMgrModel {
             }
         }
         return result;
+    }
+
+    public boolean allActed() {
+        for (Combatant c : currentActive) {
+            if (c.hasNotActed()) {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    public boolean anyUnacted() {
+        for (Combatant c : currentActive) {
+            if (c.hasNotActed()) {
+                return true;
+            }
+        }
+        return false;
     }
 }

@@ -10,6 +10,7 @@ import javafx.scene.canvas.GraphicsContext;
 import javafx.scene.control.*;
 import javafx.scene.control.cell.PropertyValueFactory;
 import javafx.scene.image.Image;
+import javafx.scene.input.MouseButton;
 import javafx.scene.layout.BorderPane;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.Priority;
@@ -36,6 +37,8 @@ public class Main extends Application {
 
     static Image actedImage = new Image(Main.class.getResourceAsStream("/acted.png"));
 
+    static Image heldImage = new Image(Main.class.getResourceAsStream("/held.png"));
+
     static Image notActedImage = new Image(Main.class.getResourceAsStream("/not_acted.png"));
 
     static class CombatantCell extends ListCell<Combatant> {
@@ -46,19 +49,30 @@ public class Main extends Application {
             if (item != null) {
                 Canvas canvas = new Canvas(340, 35);
                 GraphicsContext gc = canvas.getGraphicsContext2D();
-                if (item.isPlayer()) {
+
+                // Select font
+                if (item.isPlayer() && item.hasNotActed()) {
                     gc.setFont(Font.font("Verdana", 22));
-                } else {
+                } else if (!item.isPlayer() && item.hasNotActed()) {
                     gc.setFont(Font.font("Verdana", FontPosture.ITALIC, 22));
+                } else if (item.isPlayer()) {
+                    gc.setFont(Font.font("Verdana", 18));
+                } else {
+                    gc.setFont(Font.font("Verdana", FontPosture.ITALIC, 18));
                 }
-                if (item.held.getValue()) {
+
+                // Modify text based on status
+                if (item.hasHeldAction()) {
                     gc.fillText(item.getName() + " (Held Action)", 35, 27);
                 } else {
                     gc.fillText(item.getName(), 35, 27);
                 }
-                if (item.acted.getValue()) {
+
+                if (item.hasActed()) {
                     gc.drawImage(actedImage, 0, 3);
-                } else {
+                } else if (item.hasHeldAction()) {
+                    gc.drawImage(heldImage, 0, 3);
+                } else if (item.hasNotActed() && item.equals(hsMgrModel.currentActive.get(0))) {
                     gc.drawImage(notActedImage, 0, 3);
                 }
 
@@ -74,6 +88,8 @@ public class Main extends Application {
     protected TableView tableView;
 
     protected Stage primaryStage;
+
+    protected Button nextButton;
 
     protected MenuBar createMenu() {
         MenuBar result = new MenuBar();
@@ -305,13 +321,17 @@ public class Main extends Application {
         primaryStage.setScene(scene);
 
         HBox buttonGroup = new HBox();
-        Button nextButton = new Button("Next");
+        nextButton = new Button("Next");
         nextButton.setDefaultButton(true);
         nextButton.setOnAction(e -> next());
+        nextButton.setDisable(true);
         Button quitButton = new Button("Quit");
         quitButton.setOnAction(e -> hsMgrModel.onQuit());
         Button resetButton = new Button("Reset");
-        resetButton.setOnAction(e -> hsMgrModel.reset());
+        resetButton.setOnAction(e -> {
+            nextButton.setDisable(true);
+            hsMgrModel.reset();
+        });
 
         buttonGroup.getChildren().addAll(resetButton, quitButton, nextButton);
         buttonGroup.setPadding(new Insets(15, 12, 15, 12));
@@ -342,9 +362,17 @@ public class Main extends Application {
         ListView<Combatant> active = new ListView<>(hsMgrModel.currentActive);
         active.setPrefSize(360, 0);
         active.setOnMouseClicked(event -> {
-            if (active.getSelectionModel().getSelectedItem() != null) {
-                active.getSelectionModel().getSelectedItem().acted.setValue(!active.getSelectionModel().getSelectedItem().acted.getValue());
-                active.getSelectionModel().getSelectedItem().held.setValue(false);
+            Combatant c = active.getSelectionModel().getSelectedItem();
+            if ((active.getSelectionModel().getSelectedIndex() == 0 || c.hasHeldAction()) && event.getButton().equals(MouseButton.PRIMARY)) {
+                c.status.set(Combatant.Status.acted);
+                hsMgrModel.updateActiveList();
+            } else if ((active.getSelectionModel().getSelectedIndex() == 0 || c.hasActed()) && event.getButton().equals(MouseButton.SECONDARY)) {
+                active.getSelectionModel().getSelectedItem().status.set(Combatant.Status.heldAction);
+                hsMgrModel.updateActiveList();
+            }
+
+            if (hsMgrModel.allActed()) {
+                nextButton.setDisable(false);
             }
         });
 
@@ -380,8 +408,8 @@ public class Main extends Application {
         if (nextSeg == 13) nextSeg = 1;
 
         for (Combatant c : hsMgrModel.allCombatants) {
-            if ((c.isInPhase(nextSeg) && c.held.getValue()) ||
-                    (c.isInPhase(nextSeg) && c.isInPhase(nextSeg - 1 == 0 ? 12 : nextSeg - 1) && !c.acted.getValue())) {
+            if ((c.isInPhase(nextSeg) && c.hasHeldAction() ||
+                    (c.isInPhase(nextSeg) && c.isInPhase(nextSeg - 1 == 0 ? 12 : nextSeg - 1) && !c.hasActed()))) {
                 heldActions.add(c);
             }
         }
@@ -400,6 +428,12 @@ public class Main extends Application {
         }
 
         hsMgrModel.onNext();
+
+        if (hsMgrModel.anyUnacted()) {
+            nextButton.setDisable(true);
+        } else {
+            nextButton.setDisable(false);
+        }
     }
 
     protected TableView buildTableView() {
