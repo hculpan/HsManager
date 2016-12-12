@@ -1,24 +1,26 @@
 package org.culpan.hsmgr;
 
 import javafx.application.Application;
-import javafx.application.Platform;
-import javafx.beans.property.IntegerProperty;
 import javafx.collections.ObservableList;
 import javafx.geometry.Insets;
-import javafx.geometry.Orientation;
 import javafx.geometry.Pos;
-import javafx.geometry.VPos;
 import javafx.scene.Scene;
 import javafx.scene.canvas.Canvas;
 import javafx.scene.canvas.GraphicsContext;
 import javafx.scene.control.*;
 import javafx.scene.control.cell.PropertyValueFactory;
 import javafx.scene.image.Image;
-import javafx.scene.layout.*;
+import javafx.scene.layout.BorderPane;
+import javafx.scene.layout.HBox;
+import javafx.scene.layout.Priority;
+import javafx.scene.layout.VBox;
 import javafx.scene.text.Font;
+import javafx.scene.text.FontPosture;
 import javafx.scene.text.Text;
 import javafx.stage.FileChooser;
 import javafx.stage.Stage;
+import org.culpan.hsmgr.dialog.AddPersonDialog;
+import org.culpan.hsmgr.dialog.DamagePersonDialog;
 
 import javax.xml.bind.*;
 import java.io.File;
@@ -44,7 +46,11 @@ public class Main extends Application {
             if (item != null) {
                 Canvas canvas = new Canvas(340, 35);
                 GraphicsContext gc = canvas.getGraphicsContext2D();
-                gc.setFont(Font.font("Verdana", 22));
+                if (item.isPlayer()) {
+                    gc.setFont(Font.font("Verdana", 22));
+                } else {
+                    gc.setFont(Font.font("Verdana", FontPosture.ITALIC, 22));
+                }
                 if (item.held.getValue()) {
                     gc.fillText(item.getName() + " (Held Action)", 35, 27);
                 } else {
@@ -130,85 +136,7 @@ public class Main extends Application {
     private void damagePerson() {
         if (selectedCombatant == null) return;
 
-        Dialog<Combatant> dialog = new Dialog<>();
-        dialog.setTitle("Damage " + selectedCombatant.getName());
-        dialog.setHeaderText("Determine the damage done to " + selectedCombatant.getName());
-
-        dialog.getDialogPane().getButtonTypes().addAll(ButtonType.OK, ButtonType.CANCEL);
-
-        BorderPane borderPane = new BorderPane();
-
-        VBox vBox = new VBox();
-        vBox.setSpacing(5);
-
-        HBox topBox = new HBox();
-        topBox.setSpacing(10);
-        Button rollAttack = new Button("Roll Attack");
-        rollAttack.setDisable(false);
-        TextField dcvField = new TextField();
-        dcvField.textProperty().addListener((observable, oldValue, newValue) -> {
-            rollAttack.setDisable(!newValue.matches("\\d+"));
-        });
-
-        dcvField.setText(Integer.toString(selectedCombatant.getDcv()));
-        TextField attackResult = new TextField();
-        attackResult.setEditable(false);
-        rollAttack.setOnAction(event -> {
-            DiceRoller diceRoller = new DiceRoller();
-            int dcv = Integer.parseInt(dcvField.getText()) - 11;
-            int dice[] = diceRoller.rollDice(3, 6);
-            int total = diceRoller.total(dice);
-            attackResult.setText("OCV " + Integer.toString(dcv + total) + "+ [" +
-                    dice[0] + "," +
-                    dice[1] + "," +
-                    dice[2] + "]");
-        });
-        topBox.getChildren().addAll(new Label("DCV:"), dcvField, rollAttack, attackResult);
-
-        Separator sep = new Separator();
-        sep.setOrientation(Orientation.HORIZONTAL);
-        sep.setValignment(VPos.CENTER);
-        vBox.getChildren().addAll(topBox, sep);
-
-        borderPane.setTop(vBox);
-        dialog.getDialogPane().setContent(borderPane);
-
-/*        GridPane grid = new GridPane();
-        grid.setHgap(10);
-        grid.setVgap(10);
-        grid.setPadding(new Insets(20, 150, 10, 10));
-
-        TextField name = addFieldToPersonDialog(grid, "Name", 0, (String)null);
-        TextField con = addFieldToPersonDialog(grid, "CON", 1, (Integer)null);
-        TextField dex = addFieldToPersonDialog(grid, "DEX", 2, (Integer)null);
-        TextField rec = addFieldToPersonDialog(grid, "REC", 3, (Integer)null);
-        TextField spd = addFieldToPersonDialog(grid, "SPD", 4, (Integer)null);
-        TextField stun = addFieldToPersonDialog(grid, "STUN", 5, (Integer)null);
-        TextField body = addFieldToPersonDialog(grid, "BODY", 6, (Integer)null);
-        TextField pd = addFieldToPersonDialog(grid, "PD", 7, (Integer)null);
-        TextField ed = addFieldToPersonDialog(grid, "ED", 8, (Integer)null);
-        TextField dcv = addFieldToPersonDialog(grid, "DCV", 9, (Integer)null);
-
-        dialog.getDialogPane().setContent(grid);
-
-        Platform.runLater(() -> name.requestFocus());
-
-        dialog.setResultConverter(dialogButton -> {
-            if (dialogButton == ButtonType.OK) {
-                return Combatant.createCombatant(name.getText(),
-                        Integer.parseInt(con.getText()),
-                        Integer.parseInt(dex.getText()),
-                        Integer.parseInt(rec.getText()),
-                        Integer.parseInt(body.getText()),
-                        Integer.parseInt(stun.getText()),
-                        Integer.parseInt(spd.getText()),
-                        Integer.parseInt(pd.getText()),
-                        Integer.parseInt(ed.getText()),
-                        Integer.parseInt(dcv.getText()),
-                        false);
-            }
-            return null;
-        });*/
+        Dialog<Combatant> dialog = DamagePersonDialog.init(selectedCombatant);
 
         Optional<Combatant> result = dialog.showAndWait();
         if (result.isPresent()) {
@@ -313,90 +241,29 @@ public class Main extends Application {
         }
     }
 
-    protected CheckBox addCheckBoxToPersonDialog(GridPane grid, String name, int row, Boolean value) {
-        CheckBox result = new CheckBox(name);
+    protected void addPerson(Combatant c) {
+        Dialog<Combatant> dialog;
 
-        grid.add(result, 1, row);
-        if (value != null) {
-            result.setSelected(value);
-        }
-
-        return result;
-    }
-
-    protected TextField addFieldToPersonDialog(GridPane grid, String name, int row, String value) {
-        TextField result = new TextField();
-
-        if (value != null) {
-            result.setText(value);
+        if (c == null) {
+            dialog = AddPersonDialog.init(c, "Add Person");
         } else {
-            result.setPromptText(name);
+            dialog = AddPersonDialog.init(c, "Edit Person");
         }
 
-        grid.add(new Label(name + ": "), 0, row);
-        grid.add(result, 1, row);
-
-        return result;
-    }
-
-    protected TextField addFieldToPersonDialog(GridPane grid, String name, int row, Integer value) {
-        TextField result = new TextField();
-
-        if (value != null) {
-            result.setText(value.toString());
-        } else {
-            result.setPromptText(name);
+        Optional<Combatant> result = dialog.showAndWait();
+        if (result.isPresent()) {
+            if (c != null && hsMgrModel.allCombatants.contains(c)) {
+                int index = hsMgrModel.allCombatants.indexOf(c);
+                hsMgrModel.allCombatants.set(index, result.get());
+            } else {
+                hsMgrModel.allCombatants.add(result.get());
+            }
+            selectedCombatant = result.get();
         }
-
-        grid.add(new Label(name + ": "), 0, row);
-        grid.add(result, 1, row);
-
-        return result;
     }
 
     private void addMinions() {
-        Dialog<Combatant> dialog = new Dialog<>();
-        dialog.setTitle("Add Minions");
-        dialog.setHeaderText("Enter the combatant's information");
-
-        dialog.getDialogPane().getButtonTypes().addAll(ButtonType.OK, ButtonType.CANCEL);
-
-        GridPane grid = new GridPane();
-        grid.setHgap(10);
-        grid.setVgap(10);
-        grid.setPadding(new Insets(20, 150, 10, 10));
-
-        TextField name = addFieldToPersonDialog(grid, "Name", 0, (String)null);
-        TextField con = addFieldToPersonDialog(grid, "CON", 1, (Integer)null);
-        TextField dex = addFieldToPersonDialog(grid, "DEX", 2, (Integer)null);
-        TextField rec = addFieldToPersonDialog(grid, "REC", 3, (Integer)null);
-        TextField spd = addFieldToPersonDialog(grid, "SPD", 4, (Integer)null);
-        TextField stun = addFieldToPersonDialog(grid, "STUN", 5, (Integer)null);
-        TextField body = addFieldToPersonDialog(grid, "BODY", 6, (Integer)null);
-        TextField pd = addFieldToPersonDialog(grid, "PD", 7, (Integer)null);
-        TextField ed = addFieldToPersonDialog(grid, "ED", 8, (Integer)null);
-        TextField dcv = addFieldToPersonDialog(grid, "DCV", 9, (Integer)null);
-
-        dialog.getDialogPane().setContent(grid);
-
-        Platform.runLater(() -> name.requestFocus());
-
-        dialog.setResultConverter(dialogButton -> {
-            if (dialogButton == ButtonType.OK) {
-                return Combatant.createCombatant(name.getText(),
-                        Integer.parseInt(con.getText()),
-                        Integer.parseInt(dex.getText()),
-                        Integer.parseInt(rec.getText()),
-                        Integer.parseInt(body.getText()),
-                        Integer.parseInt(stun.getText()),
-                        Integer.parseInt(spd.getText()),
-                        Integer.parseInt(pd.getText()),
-                        Integer.parseInt(ed.getText()),
-                        Integer.parseInt(dcv.getText()),
-                        false);
-            }
-            return null;
-        });
+        Dialog<Combatant> dialog = AddPersonDialog.init(null, "Add Minions");
 
         Optional<Combatant> result = dialog.showAndWait();
         if (result.isPresent()) {
@@ -421,63 +288,6 @@ public class Main extends Application {
                     hsMgrModel.allCombatants.add(m);
                 }
             });
-        }
-    }
-
-    protected void addPerson(Combatant c) {
-        Dialog<Combatant> dialog = new Dialog<>();
-        dialog.setTitle("Add Person");
-        dialog.setHeaderText("Enter the combatant's information");
-
-        dialog.getDialogPane().getButtonTypes().addAll(ButtonType.OK, ButtonType.CANCEL);
-
-        GridPane grid = new GridPane();
-        grid.setHgap(10);
-        grid.setVgap(10);
-        grid.setPadding(new Insets(20, 150, 10, 10));
-
-        TextField name = addFieldToPersonDialog(grid, "Name", 0, (c != null ? c.getName() : null));
-        TextField con = addFieldToPersonDialog(grid, "CON", 1, (c != null ? c.getCon() : null));
-        TextField dex = addFieldToPersonDialog(grid, "DEX", 2, (c != null ? c.getDex() : null));
-        TextField rec = addFieldToPersonDialog(grid, "REC", 3, (c != null ? c.getRec() : null));
-        TextField spd = addFieldToPersonDialog(grid, "SPD", 4, (c != null ? c.getSpd() : null));
-        TextField stun = addFieldToPersonDialog(grid, "STUN", 5, (c != null ? c.getStun() : null));
-        TextField body = addFieldToPersonDialog(grid, "BODY", 6, (c != null ? c.getBody() : null));
-        TextField pd = addFieldToPersonDialog(grid, "PD", 7, (c != null ? c.getPd() : null));
-        TextField ed = addFieldToPersonDialog(grid, "ED", 8, (c != null ? c.getEd() : null));
-        TextField dcv = addFieldToPersonDialog(grid, "DCV", 9, (c != null ? c.getDcv() : null));
-        CheckBox player = addCheckBoxToPersonDialog(grid, "Player", 10, (c != null ? c.isPlayer() : null));
-
-        dialog.getDialogPane().setContent(grid);
-
-        Platform.runLater(() -> name.requestFocus());
-
-        dialog.setResultConverter(dialogButton -> {
-            if (dialogButton == ButtonType.OK) {
-                return Combatant.createCombatant(name.getText(),
-                        Integer.parseInt(con.getText()),
-                        Integer.parseInt(dex.getText()),
-                        Integer.parseInt(rec.getText()),
-                        Integer.parseInt(body.getText()),
-                        Integer.parseInt(stun.getText()),
-                        Integer.parseInt(spd.getText()),
-                        Integer.parseInt(pd.getText()),
-                        Integer.parseInt(ed.getText()),
-                        Integer.parseInt(dcv.getText()),
-                        player.isSelected());
-            }
-            return null;
-        });
-
-        Optional<Combatant> result = dialog.showAndWait();
-        if (result.isPresent()) {
-            if (c != null && hsMgrModel.allCombatants.contains(c)) {
-                int index = hsMgrModel.allCombatants.indexOf(c);
-                hsMgrModel.allCombatants.set(index, result.get());
-            } else {
-                hsMgrModel.allCombatants.add(result.get());
-            }
-            selectedCombatant = result.get();
         }
     }
 
@@ -645,7 +455,7 @@ public class Main extends Application {
                 }
         });*/
 
-        result.getColumns().addAll(name, con, rec, stun, currStun, body, currBody);
+        result.getColumns().addAll(name, stun, currStun, rec, con, body, currBody);
 
         return result;
     }
