@@ -101,6 +101,8 @@ public class Main extends Application {
                     gc.drawImage(heldImage, 1, 2);
                 } else if (item.isActive()) {
                     gc.drawImage(notActedImage, 1, 2);
+                } else if (item.hasRecovered()) {
+                    gc.drawImage(recoverImage, 1, 2);
                 }
 
                 setGraphic(canvas);
@@ -442,18 +444,23 @@ public class Main extends Application {
         active.setPrefSize(360, 0);
         active.setOnMouseClicked(event -> {
             Combatant c = active.getSelectionModel().getSelectedItem();
-            if (c.isConStunned()) {
+
+            MouseButton mouseButton = event.getButton();
+            if (mouseButton.equals(MouseButton.PRIMARY) && event.getX() > 315) {
+                c.recover();
+                hsMgrModel.updateActiveList(true);
+            } else if (c.isConStunned()) {
                 // do nothing
-            } else if (c.isActive() && event.getButton().equals(MouseButton.PRIMARY)) {
+            } else if (c.isActive() && mouseButton.equals(MouseButton.PRIMARY)) {
                 c.status.set(Combatant.Status.acted);
                 hsMgrModel.updateActiveList(true);
-            } else if (c.isActive() && event.getButton().equals(MouseButton.SECONDARY)) {
+            } else if (c.isActive() && mouseButton.equals(MouseButton.SECONDARY)) {
                 c.status.set(Combatant.Status.heldAction);
                 hsMgrModel.updateActiveList(true);
-            } else if (c.hasHeldAction() && event.getButton().equals(MouseButton.PRIMARY)) {
+            } else if (c.hasHeldAction() && mouseButton.equals(MouseButton.PRIMARY)) {
                 c.status.set(Combatant.Status.acted);
                 hsMgrModel.updateActiveList(false);
-            } else if (c.hasActed() && event.getButton().equals(MouseButton.SECONDARY)) {
+            } else if (c.hasActed() && mouseButton.equals(MouseButton.SECONDARY)) {
                 c.status.set(Combatant.Status.heldAction);
                 hsMgrModel.updateActiveList(false);
             }

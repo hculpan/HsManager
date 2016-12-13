@@ -15,7 +15,7 @@ import javax.xml.bind.annotation.XmlType;
 @XmlRootElement
 @XmlType(propOrder={"name", "player", "con", "dex", "rec", "spd", "stun", "body", "pd", "ed", "dcv"})
 public class Combatant {
-    public enum Status { unacted, heldAction, acted, conStunned, unconscious, dead };
+    public enum Status { unacted, heldAction, acted, recovered, conStunned, unconscious, dead };
 
     public final static int[][] PHASES = {
             {},
@@ -60,6 +60,8 @@ public class Combatant {
     volatile int flashed = 0;
 
     volatile int turnsUnconscious = 0;
+
+    volatile int lastRecoverAmount = 0;
 
     final BooleanProperty active = new SimpleBooleanProperty(false);
 
@@ -207,6 +209,8 @@ public class Combatant {
     public boolean hasActed() { return this.status.get().equals(Status.acted); }
 
     public boolean hasNotActed() { return this.status.get().equals(Status.unacted); }
+
+    public boolean hasRecovered() { return this.status.get().equals(Status.recovered); }
 
     @XmlTransient
     public boolean isConStunned() { return this.status.get().equals(Status.conStunned); }
@@ -364,6 +368,8 @@ public class Combatant {
             status.set(Status.unacted);
         } else if (isUnconscious() && getCurrentStun() > 0) {
             status.set(Status.unacted);
+        } else if (hasRecovered()) {
+            status.set(Status.unacted);
         }
     }
 
@@ -379,5 +385,15 @@ public class Combatant {
         } else {
             heal(getRec());
         }
+    }
+
+    public void recover() {
+        if (this.getStun() - this.getCurrentStun() < getRec()) {
+            lastRecoverAmount = this.getStun() - this.getCurrentStun();
+        } else {
+            lastRecoverAmount = getRec();
+        }
+        heal(getRec());
+        status.set(Status.recovered);
     }
 }
