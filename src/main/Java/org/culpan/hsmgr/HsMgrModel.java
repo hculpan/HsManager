@@ -30,26 +30,75 @@ public class HsMgrModel {
         onNext();
     }
 
+    public int getCurrentSegement() {
+        return Integer.parseInt(currentSegment.get());
+    }
+
+    public int getCurrentTurn() {
+        return Integer.parseInt(currentTurn.get());
+    }
+
+    protected int currentActive() {
+        int result = -1;
+
+        int i = 0;
+        for (Combatant c : currentActive) {
+            if (c.isActive()) {
+                result = i;
+                break;
+            }
+            i++;
+        }
+
+        return result;
+    }
+
+    protected void nextActive() {
+        int activeIndex = currentActive();
+
+        if (activeIndex >= 0) {
+            currentActive.get(activeIndex).getActiveProperty().set(false);
+            activeIndex++;
+        } else {
+            activeIndex = 0;
+        }
+
+        for (int i = activeIndex; i < currentActive.size(); i++) {
+            Combatant c = currentActive.get(i);
+            if (c.hasNotActed()) {
+                c.getActiveProperty().set(true);
+                c.startingAction(getCurrentSegement());
+                break;
+            }
+            c.startingAction(getCurrentSegement());
+        }
+    }
+
     protected void updateActiveList() {
-        System.out.println("updateActiveList called");
+        updateActiveList(false);
+    }
+
+    protected void updateActiveList(boolean nextAction) {
         int currSeg = Integer.parseInt(currentSegment.getValue());
 
         List<Combatant> active = new ArrayList<>();
         for (Combatant c : allCombatants) {
             if (c.isInPhase(currSeg)) {
                 active.add(c);
-                if (startingNextPhase && (c.hasActed() || c.hasHeldAction())) {
-                    c.status.set(Combatant.Status.unacted);
+                if (startingNextPhase) {
+                    c.startingPhase(currSeg);
                 }
             } else if (c.hasHeldAction()) {
                 active.add(c);
             }
         }
-        startingNextPhase = false;
         active.sort((o1, o2) -> o1.actsBefore(o2));
 
         currentActive.clear();
         currentActive.addAll(active);
+
+        if (nextAction || startingNextPhase) nextActive();
+        startingNextPhase = false;
     }
 
     public void addActiveListChangeListener() {
@@ -66,6 +115,10 @@ public class HsMgrModel {
 
         currSeg++;
         if (currSeg > 12) {
+            for (Combatant c : allCombatants) {
+                c.postSegment12();
+            }
+
             currTurn++;
             currSeg -= 12;
         }
@@ -86,6 +139,7 @@ public class HsMgrModel {
             c.status.set(Combatant.Status.unacted);
             c.currentBody.setValue(c.getBody());
             c.currentStun.setValue(c.getStun());
+            c.conStunnedAwaitingRecovery = false;
         }
 
         updateActiveList();
@@ -118,5 +172,26 @@ public class HsMgrModel {
             }
         }
         return false;
+    }
+
+    public void damage(Combatant c, int stun, int body) {
+        c.damage(stun, body);
+        updateActiveList();
+    }
+
+    public List<Combatant> getAllWithHeldActions(int segment) {
+        List<Combatant> heldActions = new ArrayList<>();
+
+        for (Combatant c : allCombatants) {
+            if (c.isInPhase(segment) && c.hasHeldAction()) {
+                heldActions.add(c);
+            }
+        }
+
+        return heldActions;
+    }
+
+    public void start() {
+        updateActiveList(true);
     }
 }

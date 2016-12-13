@@ -4,6 +4,7 @@ import javafx.application.Application;
 import javafx.collections.ObservableList;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
+import javafx.scene.Group;
 import javafx.scene.Scene;
 import javafx.scene.canvas.Canvas;
 import javafx.scene.canvas.GraphicsContext;
@@ -15,6 +16,7 @@ import javafx.scene.layout.BorderPane;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.Priority;
 import javafx.scene.layout.VBox;
+import javafx.scene.paint.Color;
 import javafx.scene.text.Font;
 import javafx.scene.text.FontPosture;
 import javafx.scene.text.Text;
@@ -33,13 +35,19 @@ import java.util.Optional;
 
 public class Main extends Application {
 
-    static protected HsMgrModel hsMgrModel = new HsMgrModel();
+    static public final HsMgrModel hsMgrModel = new HsMgrModel();
 
     static Image actedImage = new Image(Main.class.getResourceAsStream("/acted.png"));
 
     static Image heldImage = new Image(Main.class.getResourceAsStream("/held.png"));
 
     static Image notActedImage = new Image(Main.class.getResourceAsStream("/not_acted.png"));
+
+    static Image stunnedImage = new Image(Main.class.getResourceAsStream("/stunned.png"));
+
+    static Image unconsciousImage = new Image(Main.class.getResourceAsStream("/unconscious.png"));
+
+    static Image recoverImage = new Image(Main.class.getResourceAsStream("/recover.png"));
 
     static class CombatantCell extends ListCell<Combatant> {
         @Override
@@ -50,30 +58,49 @@ public class Main extends Application {
                 Canvas canvas = new Canvas(340, 35);
                 GraphicsContext gc = canvas.getGraphicsContext2D();
 
+                if (item.isActive()) {
+                    gc.strokeRect(0, 0, canvas.getWidth(), canvas.getHeight());
+                    gc.drawImage(recoverImage, canvas.getWidth() - 35, 2);
+                }
+
                 // Select font
-                if (item.isPlayer() && item.hasNotActed()) {
+                if (item.isPlayer() && item.isActive()) {
                     gc.setFont(Font.font("Verdana", 22));
-                } else if (!item.isPlayer() && item.hasNotActed()) {
+                } else if (!item.isPlayer() && item.isActive()) {
                     gc.setFont(Font.font("Verdana", FontPosture.ITALIC, 22));
                 } else if (item.isPlayer()) {
-                    gc.setFont(Font.font("Verdana", 18));
+                    gc.setFont(Font.font("Verdana", 16));
                 } else {
-                    gc.setFont(Font.font("Verdana", FontPosture.ITALIC, 18));
+                    gc.setFont(Font.font("Verdana", FontPosture.ITALIC, 16));
                 }
 
                 // Modify text based on status
+                Text text = new Text();
                 if (item.hasHeldAction()) {
-                    gc.fillText(item.getName() + " (Held Action)", 35, 27);
+                    text.setText(item.getName() + " (Held Action)");
                 } else {
-                    gc.fillText(item.getName(), 35, 27);
+                    text.setText(item.getName());
                 }
 
-                if (item.hasActed()) {
-                    gc.drawImage(actedImage, 0, 3);
+//                Scene tempScen = new Scene(new Group(text));
+//                text.applyCss();
+                double width = text.getBoundsInLocal().getWidth();
+
+                gc.setFill(Color.BLACK);
+                gc.fillText(text.getText(), 35, 27);
+
+                if (item.isConStunned()) {
+                    gc.drawImage(stunnedImage, width + 70, 3);
+                } else if (item.isUnconscious()) {
+                    gc.drawImage(unconsciousImage, width + 70, 3);
+                }
+
+                if (item.hasActed() || item.isConStunned()) {
+                    gc.drawImage(actedImage, 1, 2);
                 } else if (item.hasHeldAction()) {
-                    gc.drawImage(heldImage, 0, 3);
-                } else if (item.hasNotActed() && item.equals(hsMgrModel.currentActive.get(0))) {
-                    gc.drawImage(notActedImage, 0, 3);
+                    gc.drawImage(heldImage, 1, 2);
+                } else if (item.isActive()) {
+                    gc.drawImage(notActedImage, 1, 2);
                 }
 
                 setGraphic(canvas);
@@ -131,16 +158,66 @@ public class Main extends Application {
         editMenu.getItems().addAll(addPersonItem, addMinionsItem, editPersonItem,
                 new SeparatorMenuItem(), deletePersonItem, deleteNonPlayersItem, deleteAllItem);
 
+        Menu actionsMenu = createActionsMenu();
+
+        result.getMenus().addAll(fileMenu, editMenu, actionsMenu);
+
+        return result;
+    }
+
+    private Menu createActionsMenu() {
         Menu actionsMenu = new Menu("Actions");
         MenuItem damagePersonItem = new MenuItem("Damage Person");
         damagePersonItem.setOnAction(event -> damagePerson());
         MenuItem pushAttackItem = new MenuItem("Push Attack");
         pushAttackItem.setOnAction(event -> pushAttack(selectedCombatant));
-        actionsMenu.getItems().addAll(damagePersonItem, pushAttackItem);
 
-        result.getMenus().addAll(fileMenu, editMenu, actionsMenu);
+        MenuItem simpleStunDamage = new MenuItem("Damage Stun");
+        simpleStunDamage.setOnAction( event -> damageStun() );
+        MenuItem simpleStunHeal = new MenuItem("Heal Stun");
+        simpleStunHeal.setOnAction( event -> healStun() );
 
-        return result;
+        actionsMenu.getItems().addAll(damagePersonItem, pushAttackItem, new SeparatorMenuItem(), simpleStunDamage, simpleStunHeal);
+
+        return actionsMenu;
+    }
+
+    private void healStun() {
+        if (selectedCombatant == null || selectedCombatant.getStun() == selectedCombatant.getCurrentStun()) return;
+
+        TextInputDialog dlg = new TextInputDialog();
+        dlg.setTitle("Stun Heal");
+        dlg.setHeaderText("Heal stun damage on " + selectedCombatant.getName() + ":");
+        dlg.setContentText("Heal Stun:");
+
+        final Button okButton = (Button) dlg.getDialogPane().lookupButton(ButtonType.OK);
+        okButton.setDisable(true);
+
+        dlg.getEditor().textProperty().addListener((observable, oldValue, newValue) -> {
+            okButton.setDisable(!newValue.matches("\\d+"));
+        });
+
+        Optional<String> numText = dlg.showAndWait();
+        numText.ifPresent(value -> selectedCombatant.heal(Integer.parseInt(value), 0));
+    }
+
+    private void damageStun() {
+        if (selectedCombatant == null) return;
+
+        TextInputDialog dlg = new TextInputDialog();
+        dlg.setTitle("Stun Damage");
+        dlg.setHeaderText("Do stun damage to " + selectedCombatant.getName() + ":");
+        dlg.setContentText("Damage (no defenses apply):");
+
+        final Button okButton = (Button) dlg.getDialogPane().lookupButton(ButtonType.OK);
+        okButton.setDisable(true);
+
+        dlg.getEditor().textProperty().addListener((observable, oldValue, newValue) -> {
+            okButton.setDisable(!newValue.matches("\\d+"));
+        });
+
+        Optional<String> numText = dlg.showAndWait();
+        numText.ifPresent(value -> hsMgrModel.damage(selectedCombatant, Integer.parseInt(value), 0));
     }
 
     private void pushAttack(Combatant selectedCombatant) {
@@ -325,6 +402,8 @@ public class Main extends Application {
         nextButton.setDefaultButton(true);
         nextButton.setOnAction(e -> next());
         nextButton.setDisable(true);
+        Button startButton = new Button("Start");
+        startButton.setOnAction(e -> hsMgrModel.start());
         Button quitButton = new Button("Quit");
         quitButton.setOnAction(e -> hsMgrModel.onQuit());
         Button resetButton = new Button("Reset");
@@ -333,7 +412,7 @@ public class Main extends Application {
             hsMgrModel.reset();
         });
 
-        buttonGroup.getChildren().addAll(resetButton, quitButton, nextButton);
+        buttonGroup.getChildren().addAll(startButton, resetButton, quitButton, nextButton);
         buttonGroup.setPadding(new Insets(15, 12, 15, 12));
         buttonGroup.setAlignment(Pos.CENTER);
         buttonGroup.setSpacing(30);
@@ -363,12 +442,20 @@ public class Main extends Application {
         active.setPrefSize(360, 0);
         active.setOnMouseClicked(event -> {
             Combatant c = active.getSelectionModel().getSelectedItem();
-            if ((active.getSelectionModel().getSelectedIndex() == 0 || c.hasHeldAction()) && event.getButton().equals(MouseButton.PRIMARY)) {
+            if (c.isConStunned()) {
+                // do nothing
+            } else if (c.isActive() && event.getButton().equals(MouseButton.PRIMARY)) {
                 c.status.set(Combatant.Status.acted);
-                hsMgrModel.updateActiveList();
-            } else if ((active.getSelectionModel().getSelectedIndex() == 0 || c.hasActed()) && event.getButton().equals(MouseButton.SECONDARY)) {
-                active.getSelectionModel().getSelectedItem().status.set(Combatant.Status.heldAction);
-                hsMgrModel.updateActiveList();
+                hsMgrModel.updateActiveList(true);
+            } else if (c.isActive() && event.getButton().equals(MouseButton.SECONDARY)) {
+                c.status.set(Combatant.Status.heldAction);
+                hsMgrModel.updateActiveList(true);
+            } else if (c.hasHeldAction() && event.getButton().equals(MouseButton.PRIMARY)) {
+                c.status.set(Combatant.Status.acted);
+                hsMgrModel.updateActiveList(false);
+            } else if (c.hasActed() && event.getButton().equals(MouseButton.SECONDARY)) {
+                c.status.set(Combatant.Status.heldAction);
+                hsMgrModel.updateActiveList(false);
             }
 
             if (hsMgrModel.allActed()) {
@@ -403,16 +490,10 @@ public class Main extends Application {
     }
 
     private void next() {
-        List<Combatant> heldActions = new LinkedList<>();
         int nextSeg = Integer.parseInt(hsMgrModel.currentSegment.getValue()) + 1;
         if (nextSeg == 13) nextSeg = 1;
 
-        for (Combatant c : hsMgrModel.allCombatants) {
-            if ((c.isInPhase(nextSeg) && c.hasHeldAction() ||
-                    (c.isInPhase(nextSeg) && c.isInPhase(nextSeg - 1 == 0 ? 12 : nextSeg - 1) && !c.hasActed()))) {
-                heldActions.add(c);
-            }
-        }
+        List<Combatant> heldActions = hsMgrModel.getAllWithHeldActions(nextSeg);
 
         if (heldActions.size() > 0) {
             Alert alert = new Alert(Alert.AlertType.INFORMATION);

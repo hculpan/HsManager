@@ -6,6 +6,7 @@ import javafx.util.Callback;
 
 import javax.xml.bind.annotation.XmlElement;
 import javax.xml.bind.annotation.XmlRootElement;
+import javax.xml.bind.annotation.XmlTransient;
 import javax.xml.bind.annotation.XmlType;
 
 /**
@@ -53,6 +54,19 @@ public class Combatant {
     int dcv;
 
     boolean player;
+
+    volatile boolean conStunnedAwaitingRecovery = false;
+
+    volatile int flashed = 0;
+
+    volatile int turnsUnconscious = 0;
+
+    final BooleanProperty active = new SimpleBooleanProperty(false);
+
+    @XmlTransient
+    public boolean isActive() { return active.get(); }
+
+    public BooleanProperty getActiveProperty() { return active; }
 
     final IntegerProperty currentStun = new SimpleIntegerProperty();
 
@@ -179,11 +193,26 @@ public class Combatant {
         this.player = player;
     }
 
+    @XmlTransient
+    public boolean isConStunnedAwaitingRecovery() {
+        return conStunnedAwaitingRecovery;
+    }
+
+    public void setConStunnedAwaitingRecovery(boolean conStunnedAwaitingRecovery) {
+        this.conStunnedAwaitingRecovery = conStunnedAwaitingRecovery;
+    }
+
     public boolean hasHeldAction() { return this.status.get().equals(Status.heldAction); }
 
     public boolean hasActed() { return this.status.get().equals(Status.acted); }
 
     public boolean hasNotActed() { return this.status.get().equals(Status.unacted); }
+
+    @XmlTransient
+    public boolean isConStunned() { return this.status.get().equals(Status.conStunned); }
+
+    @XmlTransient
+    public boolean isUnconscious() { return this.status.get().equals(Status.unconscious); }
 
     public int[] getPhases() {
         return PHASES[getSpd()];
@@ -272,31 +301,14 @@ public class Combatant {
     public int actsBefore(Combatant c) {
         int result = 0;
 
-        if (!this.getStatus().equals(c.getStatus())) {
-            if (this.getStatus().ordinal() < c.getStatus().ordinal()) {
-                result = -1;
-            } else {
-                result = 1;
-            }
+        if (this.getDex() > c.getDex()) {
+            result = -1;
+        } else if (this.getDex() < c.getDex()) {
+            result = 1;
+        } else if (this.getName().hashCode() > c.getName().hashCode()) {
+            result = -1;
         } else {
-            if (this.getDex() > c.getDex()) {
-                result = -1;
-            } else if (this.getDex() < c.getDex()) {
-                result = 1;
-            } else {
-                DiceRoller diceRoller = new DiceRoller();
-                int n1 = diceRoller.rollTotal(1, 6);
-                int n2 = diceRoller.rollTotal(1, 6);
-                do {
-                    if (n1 > n2) {
-                        result = -1;
-                    } else if (n1 < n2) {
-                        result = 1;
-                    }
-                    n1 = diceRoller.rollTotal(1, 6);
-                    n2 = diceRoller.rollTotal(1, 6);
-                } while (n1 == n2);
-            }
+            return 1;
         }
 
         return result;
@@ -305,12 +317,67 @@ public class Combatant {
     public void damage(int stun, int body) {
         this.currentStun.setValue(this.currentStun.getValue() - stun);
         if (currentStun.get() <= 0) {
+            conStunnedAwaitingRecovery = false;
             status.set(Status.unconscious);
+        } else if (stun > getCon() && !isConStunned()) {
+            conStunnedAwaitingRecovery = !hasHeldAction();
+            status.set(Status.conStunned);
         }
         this.currentBody.setValue(this.currentBody.getValue() - body);
     }
 
+    public void heal(int stun) {
+        heal(stun, 0);
+    }
+
     public void heal(int stun, int body) {
-        damage(stun * -1, body * -1);
+        if (stun + getCurrentStun() > getStun()) {
+            currentStun.setValue(getStun());
+        } else {
+            currentStun.set(getCurrentStun() + stun);
+        }
+
+        if (body + getCurrentBody() > getBody()) {
+            currentBody.set(getBody());
+        } else {
+            currentBody.set(body + getCurrentBody());
+        }
+    }
+
+    /**
+     * This method is called at the start of the combatant's
+     * turn in the phase
+     * @param phase
+     */
+    public void startingAction(int phase) {
+        if (isConStunned() && conStunnedAwaitingRecovery) {
+            conStunnedAwaitingRecovery = false;
+        } else if (isUnconscious() && getCurrentStun() > -11) {
+            heal(getRec());
+        }
+    }
+
+    public void startingPhase(int phase) {
+        if (isConStunned() && !conStunnedAwaitingRecovery) {
+            status.set(Status.unacted);
+        } else if (hasActed() || hasHeldAction()) {
+            status.set(Status.unacted);
+        } else if (isUnconscious() && getCurrentStun() > 0) {
+            status.set(Status.unacted);
+        }
+    }
+
+    public void postSegment12() {
+        if (isUnconscious() && getCurrentStun() < -20 && getCurrentStun() > -31 && Main.hsMgrModel.getCurrentTurn() > 1) {
+            turnsUnconscious++;
+            if (turnsUnconscious == 5) {
+                heal(getRec());
+                turnsUnconscious = 0;
+            }
+        } else if (isUnconscious() && getCurrentStun() < -31) {
+            // do nothing
+        } else {
+            heal(getRec());
+        }
     }
 }
