@@ -1,13 +1,13 @@
 package org.culpan.hsmgr.dialog;
 
-import javafx.geometry.Orientation;
-import javafx.geometry.VPos;
+import javafx.application.Platform;
+import javafx.geometry.*;
 import javafx.scene.control.*;
-import javafx.scene.layout.BorderPane;
-import javafx.scene.layout.HBox;
-import javafx.scene.layout.VBox;
+import javafx.scene.layout.*;
 import org.culpan.hsmgr.Combatant;
 import org.culpan.hsmgr.DiceRoller;
+
+import javax.swing.*;
 
 /**
  * Created by harryculpan on 12/11/16.
@@ -57,44 +57,88 @@ public class DamagePersonDialog<T> extends Dialog<Combatant> {
         borderPane.setTop(vBox);
         dialog.getDialogPane().setContent(borderPane);
 
-/*        GridPane grid = new GridPane();
+        GridPane grid = new GridPane();
         grid.setHgap(10);
         grid.setVgap(10);
-        grid.setPadding(new Insets(20, 150, 10, 10));
+        grid.setPadding(new Insets(20, 10, 10, 10));
 
-        TextField name = addFieldToPersonDialog(grid, "Name", 0, (String)null);
-        TextField con = addFieldToPersonDialog(grid, "CON", 1, (Integer)null);
-        TextField dex = addFieldToPersonDialog(grid, "DEX", 2, (Integer)null);
-        TextField rec = addFieldToPersonDialog(grid, "REC", 3, (Integer)null);
-        TextField spd = addFieldToPersonDialog(grid, "SPD", 4, (Integer)null);
-        TextField stun = addFieldToPersonDialog(grid, "STUN", 5, (Integer)null);
-        TextField body = addFieldToPersonDialog(grid, "BODY", 6, (Integer)null);
-        TextField pd = addFieldToPersonDialog(grid, "PD", 7, (Integer)null);
-        TextField ed = addFieldToPersonDialog(grid, "ED", 8, (Integer)null);
-        TextField dcv = addFieldToPersonDialog(grid, "DCV", 9, (Integer)null);
+        ColumnConstraints column0 = new ColumnConstraints();
+        column0.setHalignment(HPos.LEFT);
+        grid.getColumnConstraints().add(column0);
 
-        dialog.getDialogPane().setContent(grid);
+        ColumnConstraints column1 = new ColumnConstraints();
+        column1.setHalignment(HPos.CENTER);
+        grid.getColumnConstraints().add(column1);
 
-        Platform.runLater(() -> name.requestFocus());
+        ColumnConstraints column2 = new ColumnConstraints();
+        column2.setHalignment(HPos.RIGHT);
+        column2.setHgrow(Priority.ALWAYS);
+        grid.getColumnConstraints().add(column2);
+
+        ToggleGroup defensesGroup = new ToggleGroup();
+        grid.add(buildRadioButton("Full PD", defensesGroup, true), 0, 2);
+        grid.add(buildRadioButton("Full ED", defensesGroup), 0, 3);
+        grid.add(buildRadioButton("Half PD", defensesGroup), 0, 4);
+        grid.add(buildRadioButton("Half ED", defensesGroup), 0, 5);
+        grid.add(buildRadioButton("No Defense", defensesGroup), 0, 6);
+
+        TextField stunOutput = new TextField();
+        grid.add(buildResponseField("Stun: ", stunOutput), 1, 2);
+        TextField bodyOutput = new TextField();
+        grid.add(buildResponseField("Body: ", bodyOutput), 1, 4);
+        TextField kbOutput = new TextField();
+        grid.add(buildResponseField("KB: ", kbOutput), 1, 6);
+
+        grid.add(buildDiceButton(8), 2, 0);
+        grid.add(buildDiceButton(10), 2, 1);
+        grid.add(buildDiceButton(12), 2, 2);
+        grid.add(buildDiceButton(14), 2, 3);
+        grid.add(buildDiceButton(16), 2, 4);
+        grid.add(buildDiceButton(18), 2, 5);
+        grid.add(buildDiceButton(20), 2, 6);
+
+        borderPane.setCenter(grid);
+
+        //Platform.runLater(() -> name.requestFocus());
 
         dialog.setResultConverter(dialogButton -> {
             if (dialogButton == ButtonType.OK) {
-                return Combatant.createCombatant(name.getText(),
-                        Integer.parseInt(con.getText()),
-                        Integer.parseInt(dex.getText()),
-                        Integer.parseInt(rec.getText()),
-                        Integer.parseInt(body.getText()),
-                        Integer.parseInt(stun.getText()),
-                        Integer.parseInt(spd.getText()),
-                        Integer.parseInt(pd.getText()),
-                        Integer.parseInt(ed.getText()),
-                        Integer.parseInt(dcv.getText()),
-                        false);
             }
             return null;
-        });*/
+        });
 
         return dialog;
     }
 
+    protected static HBox buildResponseField(String text, TextField textField) {
+        HBox hBox = new HBox();
+        Label label = new Label(text);
+        label.setPrefWidth(75);
+        label.setAlignment(Pos.CENTER_RIGHT);
+        Label spacer = new Label();
+        spacer.setPrefWidth(50);
+        hBox.getChildren().addAll(label, textField, spacer);
+        textField.setEditable(false);
+        return hBox;
+    }
+
+    protected static Button buildDiceButton(int dice) {
+        Button result = new Button();
+
+        result.setText(Integer.toString(dice) + "d6");
+        result.setPrefWidth(100);
+
+        return result;
+    }
+
+    protected static RadioButton buildRadioButton(String text, ToggleGroup group) {
+        return buildRadioButton(text, group, false);
+    }
+
+    protected static RadioButton buildRadioButton(String text, ToggleGroup group, boolean toggled) {
+        RadioButton result = new RadioButton(text);
+        result.setToggleGroup(group);
+        result.setSelected(toggled);
+        return result;
+    }
 }
