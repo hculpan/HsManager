@@ -1,6 +1,8 @@
 package org.culpan.hsmgr;
 
 import javafx.application.Application;
+import javafx.beans.value.ChangeListener;
+import javafx.beans.value.ObservableValue;
 import javafx.collections.ObservableList;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
@@ -15,7 +17,6 @@ import javafx.scene.layout.BorderPane;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.Priority;
 import javafx.scene.layout.VBox;
-import javafx.scene.paint.Color;
 import javafx.scene.text.Font;
 import javafx.scene.text.FontPosture;
 import javafx.scene.text.Text;
@@ -47,7 +48,11 @@ public class Main extends Application {
 
     static Image recoverImage = new Image(Main.class.getResourceAsStream("/recover.png"));
 
+    static Image recoverFlagImage = new Image(Main.class.getResourceAsStream("/recover_flag.png"));
+
     static Image abortedImage = new Image(Main.class.getResourceAsStream("/aborted.png"));
+
+    static Image flashedImage = new Image(Main.class.getResourceAsStream("/flash.png"));
 
     static class CombatantCell extends ListCell<Combatant> {
         @Override
@@ -58,8 +63,7 @@ public class Main extends Application {
                 Canvas canvas = new Canvas(340, 35);
                 GraphicsContext gc = canvas.getGraphicsContext2D();
 
-                if (item.isActive()) {
-                    gc.strokeRect(0, 0, canvas.getWidth(), canvas.getHeight());
+                if (item.isActive() && !item.isFullStun()) {
                     gc.drawImage(recoverImage, canvas.getWidth() - 35, 2);
                 }
 
@@ -77,34 +81,42 @@ public class Main extends Application {
                 // Modify text based on status
                 Text text = new Text();
                 if (item.hasHeldAction()) {
-                    text.setText(item.getName() + " (Held Action)");
+                    text.setText(item.getName() + " (Held)");
+                } else if (item.hasAborted()) {
+                    text.setText(item.getName() + " (Aborted)");
                 } else {
                     text.setText(item.getName());
                 }
 
-//                Scene tempScen = new Scene(new Group(text));
-//                text.applyCss();
-                double width = text.getBoundsInLocal().getWidth();
+                double width = text.getBoundsInLocal().getWidth() * 1.25;
 
-                gc.setFill(Color.BLACK);
                 gc.fillText(text.getText(), 35, 27);
+                width += 70;
 
                 if (item.isConStunned()) {
-                    gc.drawImage(stunnedImage, width + 70, 3);
+                    gc.drawImage(stunnedImage, width, 3);
+                    width += 40;
                 } else if (item.isUnconscious()) {
-                    gc.drawImage(unconsciousImage, width + 70, 3);
+                    gc.drawImage(unconsciousImage, width, 3);
+                    width += 40;
+                }
+
+                if (item.isFlashed()) {
+                    gc.drawImage(flashedImage, width, 3);
                 }
 
                 if (item.hasActed() || item.isConStunned()) {
                     gc.drawImage(actedImage, 1, 2);
                 } else if (item.hasHeldAction()) {
                     gc.drawImage(heldImage, 1, 2);
-                } else if (item.isActive()) {
-                    gc.drawImage(notActedImage, 1, 2);
-                } else if (item.hasRecovered()) {
-                    gc.drawImage(recoverImage, 1, 2);
                 } else if (item.hasAborted()) {
                     gc.drawImage(abortedImage, 1, 2);
+                } else if (item.hasRecovered()) {
+                    gc.drawImage(recoverFlagImage, 1, 2);
+                } else if (item.isActive()) {
+                    gc.drawImage(notActedImage, 1, 2);
+                    gc.strokeRoundRect(0, 0, canvas.getWidth(), canvas.getHeight(), 20, 20);
+                    gc.strokeRoundRect(1, 1, canvas.getWidth() - 2, canvas.getHeight() - 2, 20, 20);
                 }
 
                 setGraphic(canvas);
@@ -184,17 +196,51 @@ public class Main extends Application {
         simpleStunDamage.setOnAction( event -> damageStun() );
         MenuItem simpleStunHeal = new MenuItem("Heal Stun");
         simpleStunHeal.setOnAction( event -> healStun() );
+        MenuItem flashItem = new MenuItem("Flash");
+        flashItem.setOnAction(event -> flash());
 
         actionsMenu.getItems().addAll(damagePersonItem, pushAttackItem, abortItem,
-                new SeparatorMenuItem(), simpleStunDamage, simpleStunHeal);
+                new SeparatorMenuItem(), flashItem, simpleStunDamage, simpleStunHeal);
 
         return actionsMenu;
     }
 
-    private void abort() {
-        if (selectedCombatant == null || !selectedCombatant.canAbort(hsMgrModel.getCurrentSegement())) return;
+    private void flash() {
+        if (selectedCombatant == null || selectedCombatant.isUnconscious()) return;
 
-        selectedCombatant.abort();
+        TextInputDialog dlg = new TextInputDialog();
+        dlg.setTitle("Flash Attack");
+        dlg.setHeaderText("Flash attack on " + selectedCombatant.getName() + ":");
+        dlg.setContentText("Segments:");
+
+        final Button okButton = (Button) dlg.getDialogPane().lookupButton(ButtonType.OK);
+        okButton.setDisable(true);
+
+        dlg.getEditor().textProperty().addListener((observable, oldValue, newValue) -> {
+            okButton.setDisable(!newValue.matches("\\d+"));
+        });
+
+        Optional<String> numText = dlg.showAndWait();
+        numText.ifPresent(value -> selectedCombatant.setFlashed(Integer.parseInt(value)) );
+        hsMgrModel.updateActiveList();
+    }
+
+    private void abort() {
+        if (selectedCombatant == null) return;
+        if (!selectedCombatant.canAbort(hsMgrModel.getCurrentSegement())) {
+            Alert alert = new Alert(Alert.AlertType.INFORMATION);
+            alert.setTitle("Abort");
+            alert.setHeaderText("Cannot Abort");
+            alert.setContentText(selectedCombatant.getName() + " cannot abort at this time");
+
+            alert.showAndWait();
+            return;
+        }
+
+        selectedCombatant.abort(hsMgrModel.getCurrentSegement());
+        if (selectedCombatant.isActive()) {
+            hsMgrModel.updateActiveList(true);
+        }
     }
 
     private void healStun() {
@@ -416,15 +462,28 @@ public class Main extends Application {
         nextButton = new Button("Next");
         nextButton.setDefaultButton(true);
         nextButton.setOnAction(e -> next());
+        final ChangeListener<Boolean> nextChangeListener = (ObservableValue<? extends Boolean> observer, Boolean oldValue, Boolean newValue) -> {
+            nextButton.setDisable(!newValue);
+        };
+        hsMgrModel.doneWithPhase.addListener(nextChangeListener);
         nextButton.setDisable(true);
-        Button startButton = new Button("Start");
-        startButton.setOnAction(e -> hsMgrModel.start());
+        final Button startButton = new Button("Start");
         Button quitButton = new Button("Quit");
         quitButton.setOnAction(e -> hsMgrModel.onQuit());
-        Button resetButton = new Button("Reset");
+        final Button resetButton = new Button("Reset");
+        resetButton.setDisable(true);
+
+        // Setup start/reset button enabling/disabling
         resetButton.setOnAction(e -> {
             nextButton.setDisable(true);
+            startButton.setDisable(false);
+            resetButton.setDisable(true);
             hsMgrModel.reset();
+        });
+        startButton.setOnAction(e -> {
+            startButton.setDisable(true);
+            resetButton.setDisable(false);
+            hsMgrModel.start();
         });
 
         buttonGroup.getChildren().addAll(startButton, resetButton, quitButton, nextButton);
@@ -476,10 +535,6 @@ public class Main extends Application {
             } else if (c.hasActed() && mouseButton.equals(MouseButton.SECONDARY)) {
                 c.status.set(Combatant.Status.heldAction);
                 hsMgrModel.updateActiveList(false);
-            }
-
-            if (hsMgrModel.allActed()) {
-                nextButton.setDisable(false);
             }
         });
 

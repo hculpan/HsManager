@@ -1,6 +1,8 @@
 package org.culpan.hsmgr;
 
 import javafx.beans.Observable;
+import javafx.beans.property.BooleanProperty;
+import javafx.beans.property.SimpleBooleanProperty;
 import javafx.beans.property.SimpleStringProperty;
 import javafx.beans.property.StringProperty;
 import javafx.collections.FXCollections;
@@ -22,6 +24,8 @@ public class HsMgrModel {
     public StringProperty currentTurn = new SimpleStringProperty("1");
 
     public StringProperty currentSegment = new SimpleStringProperty("11");
+
+    public BooleanProperty doneWithPhase = new SimpleBooleanProperty(true);
 
     protected boolean startingNextPhase = true;
 
@@ -72,15 +76,19 @@ public class HsMgrModel {
             activeIndex = 0;
         }
 
+        boolean haveNextActive = false;
         for (int i = activeIndex; i < currentActive.size(); i++) {
             Combatant c = currentActive.get(i);
             if (c.hasNotActed()) {
                 c.getActiveProperty().set(true);
                 c.startingAction(getCurrentSegement());
+                haveNextActive = true;
                 break;
             }
             c.startingAction(getCurrentSegement());
         }
+
+        doneWithPhase.setValue(!haveNextActive);
     }
 
     protected void updateActiveList() {
@@ -122,6 +130,12 @@ public class HsMgrModel {
 
         startingNextPhase = true;
 
+        for (Combatant c : allCombatants) {
+            c.reduceFlash();
+        }
+
+        doneWithPhase.set(false);
+
         currSeg++;
         if (currSeg > 12) {
             for (Combatant c : allCombatants) {
@@ -149,6 +163,7 @@ public class HsMgrModel {
             c.currentBody.setValue(c.getBody());
             c.currentStun.setValue(c.getStun());
             c.conStunnedAwaitingRecovery = false;
+            c.getActiveProperty().set(false);
         }
 
         updateActiveList();
@@ -185,7 +200,11 @@ public class HsMgrModel {
 
     public void damage(Combatant c, int stun, int body) {
         c.damage(stun, body);
-        updateActiveList();
+        if (c.isActive() && (c.isConStunned() || c.isUnconscious())) {
+            updateActiveList(true);
+        } else {
+            updateActiveList();
+        }
     }
 
     public List<Combatant> getAllWithHeldActions(int segment) {

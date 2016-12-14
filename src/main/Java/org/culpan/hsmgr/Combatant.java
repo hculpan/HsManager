@@ -57,7 +57,7 @@ public class Combatant {
 
     volatile boolean conStunnedAwaitingRecovery = false;
 
-    volatile boolean abortedAwaitingAction = false;
+    volatile int abortSegment = 0;
 
     volatile int flashed = 0;
 
@@ -198,6 +198,20 @@ public class Combatant {
     }
 
     @XmlTransient
+    public boolean isFlashed() {
+        return flashed > 0;
+    }
+
+    @XmlTransient
+    public int getFlashed() {
+        return flashed;
+    }
+
+    public void setFlashed(int flashed) {
+        this.flashed = flashed;
+    }
+
+    @XmlTransient
     public boolean isConStunnedAwaitingRecovery() {
         return conStunnedAwaitingRecovery;
     }
@@ -221,6 +235,9 @@ public class Combatant {
 
     @XmlTransient
     public boolean isUnconscious() { return this.status.get().equals(Status.unconscious); }
+
+    @XmlTransient
+    public boolean isFullStun() { return getCurrentStun() == getStun(); }
 
     public int[] getPhases() {
         return PHASES[getSpd()];
@@ -328,7 +345,7 @@ public class Combatant {
             conStunnedAwaitingRecovery = false;
             status.set(Status.unconscious);
         } else if (stun > getCon() && !isConStunned()) {
-            conStunnedAwaitingRecovery = !hasHeldAction();
+            conStunnedAwaitingRecovery = (!hasHeldAction() && !isActive());
             status.set(Status.conStunned);
         }
         this.currentBody.setValue(this.currentBody.getValue() - body);
@@ -360,8 +377,8 @@ public class Combatant {
     public void startingAction(int phase) {
         if (isConStunned() && conStunnedAwaitingRecovery) {
             conStunnedAwaitingRecovery = false;
-        } else if (hasAborted() && abortedAwaitingAction) {
-            abortedAwaitingAction = false;
+        } else if (hasAborted() && abortSegment == 0) {
+            abortSegment = phase;
         } else if (isUnconscious() && getCurrentStun() > -11) {
             heal(getRec());
         }
@@ -370,7 +387,7 @@ public class Combatant {
     public void startingPhase(int phase) {
         if (isConStunned() && !conStunnedAwaitingRecovery) {
             status.set(Status.unacted);
-        } else if (hasAborted() && !abortedAwaitingAction) {
+        } else if (hasAborted() && abortSegment > 0) {
             status.set(Status.unacted);
         } else if (hasActed() || hasHeldAction()) {
             status.set(Status.unacted);
@@ -412,16 +429,26 @@ public class Combatant {
             return false;
         } else if (isConStunned() && conStunnedAwaitingRecovery) {
             return false;
-        } else if (hasAborted() && abortedAwaitingAction) {
+        } else if (hasAborted() && abortSegment == 0) {
+            return false;
+        } else if (hasAborted() && abortSegment == phase) {
             return false;
         }
 
         return true;
     }
 
-    public void abort() {
+    public void abort(int currPhase) {
         status.set(Status.aborted);
-        abortedAwaitingAction = true;
+        if (isActive()) {
+            abortSegment = currPhase;
+        } else {
+            abortSegment = 0;
+        }
     }
 
+
+    public void reduceFlash() {
+        if (flashed > 0) flashed--;
+    }
 }
