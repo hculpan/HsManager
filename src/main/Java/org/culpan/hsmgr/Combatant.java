@@ -15,7 +15,7 @@ import javax.xml.bind.annotation.XmlType;
 @XmlRootElement
 @XmlType(propOrder={"name", "player", "con", "dex", "rec", "spd", "stun", "body", "pd", "ed", "dcv"})
 public class Combatant {
-    public enum Status { unacted, heldAction, acted, recovered, conStunned, unconscious, dead };
+    public enum Status { unacted, heldAction, aborted, acted, recovered, conStunned, unconscious, dead };
 
     public final static int[][] PHASES = {
             {},
@@ -56,6 +56,8 @@ public class Combatant {
     boolean player;
 
     volatile boolean conStunnedAwaitingRecovery = false;
+
+    volatile boolean abortedAwaitingAction = false;
 
     volatile int flashed = 0;
 
@@ -212,6 +214,8 @@ public class Combatant {
 
     public boolean hasRecovered() { return this.status.get().equals(Status.recovered); }
 
+    public boolean hasAborted() { return this.status.get().equals(Status.aborted); }
+
     @XmlTransient
     public boolean isConStunned() { return this.status.get().equals(Status.conStunned); }
 
@@ -356,6 +360,8 @@ public class Combatant {
     public void startingAction(int phase) {
         if (isConStunned() && conStunnedAwaitingRecovery) {
             conStunnedAwaitingRecovery = false;
+        } else if (hasAborted() && abortedAwaitingAction) {
+            abortedAwaitingAction = false;
         } else if (isUnconscious() && getCurrentStun() > -11) {
             heal(getRec());
         }
@@ -363,6 +369,8 @@ public class Combatant {
 
     public void startingPhase(int phase) {
         if (isConStunned() && !conStunnedAwaitingRecovery) {
+            status.set(Status.unacted);
+        } else if (hasAborted() && !abortedAwaitingAction) {
             status.set(Status.unacted);
         } else if (hasActed() || hasHeldAction()) {
             status.set(Status.unacted);
@@ -396,4 +404,24 @@ public class Combatant {
         heal(getRec());
         status.set(Status.recovered);
     }
+
+    public boolean canAbort(int phase) {
+        if (hasActed() && isInPhase(phase)) {
+            return false;
+        } else if (isUnconscious()) {
+            return false;
+        } else if (isConStunned() && conStunnedAwaitingRecovery) {
+            return false;
+        } else if (hasAborted() && abortedAwaitingAction) {
+            return false;
+        }
+
+        return true;
+    }
+
+    public void abort() {
+        status.set(Status.aborted);
+        abortedAwaitingAction = true;
+    }
+
 }

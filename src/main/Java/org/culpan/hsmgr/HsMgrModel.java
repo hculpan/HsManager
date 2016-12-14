@@ -38,7 +38,7 @@ public class HsMgrModel {
         return Integer.parseInt(currentTurn.get());
     }
 
-    protected int currentActive() {
+    public int currentActiveIndex() {
         int result = -1;
 
         int i = 0;
@@ -53,8 +53,17 @@ public class HsMgrModel {
         return result;
     }
 
+    public Combatant getCurrentActive() {
+        Combatant result = null;
+        int index = currentActiveIndex();
+        if (index >= 0) {
+            result = currentActive.get(index);
+        }
+        return result;
+    }
+
     protected void nextActive() {
-        int activeIndex = currentActive();
+        int activeIndex = currentActiveIndex();
 
         if (activeIndex >= 0) {
             currentActive.get(activeIndex).getActiveProperty().set(false);

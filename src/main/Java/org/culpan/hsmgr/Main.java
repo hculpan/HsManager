@@ -4,7 +4,6 @@ import javafx.application.Application;
 import javafx.collections.ObservableList;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
-import javafx.scene.Group;
 import javafx.scene.Scene;
 import javafx.scene.canvas.Canvas;
 import javafx.scene.canvas.GraphicsContext;
@@ -29,7 +28,6 @@ import javax.xml.bind.*;
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
-import java.util.LinkedList;
 import java.util.List;
 import java.util.Optional;
 
@@ -48,6 +46,8 @@ public class Main extends Application {
     static Image unconsciousImage = new Image(Main.class.getResourceAsStream("/unconscious.png"));
 
     static Image recoverImage = new Image(Main.class.getResourceAsStream("/recover.png"));
+
+    static Image abortedImage = new Image(Main.class.getResourceAsStream("/aborted.png"));
 
     static class CombatantCell extends ListCell<Combatant> {
         @Override
@@ -103,6 +103,8 @@ public class Main extends Application {
                     gc.drawImage(notActedImage, 1, 2);
                 } else if (item.hasRecovered()) {
                     gc.drawImage(recoverImage, 1, 2);
+                } else if (item.hasAborted()) {
+                    gc.drawImage(abortedImage, 1, 2);
                 }
 
                 setGraphic(canvas);
@@ -119,6 +121,8 @@ public class Main extends Application {
     protected Stage primaryStage;
 
     protected Button nextButton;
+
+    protected MenuItem abortItem;
 
     protected MenuBar createMenu() {
         MenuBar result = new MenuBar();
@@ -173,15 +177,24 @@ public class Main extends Application {
         damagePersonItem.setOnAction(event -> damagePerson());
         MenuItem pushAttackItem = new MenuItem("Push Attack");
         pushAttackItem.setOnAction(event -> pushAttack(selectedCombatant));
+        abortItem = new MenuItem("Abort");
+        abortItem.setOnAction(event -> abort());
 
         MenuItem simpleStunDamage = new MenuItem("Damage Stun");
         simpleStunDamage.setOnAction( event -> damageStun() );
         MenuItem simpleStunHeal = new MenuItem("Heal Stun");
         simpleStunHeal.setOnAction( event -> healStun() );
 
-        actionsMenu.getItems().addAll(damagePersonItem, pushAttackItem, new SeparatorMenuItem(), simpleStunDamage, simpleStunHeal);
+        actionsMenu.getItems().addAll(damagePersonItem, pushAttackItem, abortItem,
+                new SeparatorMenuItem(), simpleStunDamage, simpleStunHeal);
 
         return actionsMenu;
+    }
+
+    private void abort() {
+        if (selectedCombatant == null || !selectedCombatant.canAbort(hsMgrModel.getCurrentSegement())) return;
+
+        selectedCombatant.abort();
     }
 
     private void healStun() {
@@ -394,7 +407,7 @@ public class Main extends Application {
         BorderPane root = new BorderPane();
         rootPane.setVgrow(root, Priority.ALWAYS);
         primaryStage.setTitle("Hero System Manager");
-        primaryStage.setResizable(false);
+        //primaryStage.setResizable(false);
         rootPane.getChildren().addAll(createMenu(), root);
         Scene scene = new Scene(rootPane, 1000, 800);
         primaryStage.setScene(scene);
