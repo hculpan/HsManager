@@ -22,6 +22,7 @@ import javafx.scene.text.FontPosture;
 import javafx.scene.text.Text;
 import javafx.stage.FileChooser;
 import javafx.stage.Stage;
+import javafx.util.Pair;
 import org.culpan.hsmgr.dialog.AddPersonDialog;
 import org.culpan.hsmgr.dialog.DamagePersonDialog;
 
@@ -191,16 +192,16 @@ public class Main extends Application {
         pushAttackItem.setOnAction(event -> pushAttack(selectedCombatant));
         abortItem = new MenuItem("Abort");
         abortItem.setOnAction(event -> abort());
+        MenuItem flashItem = new MenuItem("Flash");
+        flashItem.setOnAction(event -> flash());
 
         MenuItem simpleStunDamage = new MenuItem("Damage Stun");
         simpleStunDamage.setOnAction( event -> damageStun() );
         MenuItem simpleStunHeal = new MenuItem("Heal Stun");
         simpleStunHeal.setOnAction( event -> healStun() );
-        MenuItem flashItem = new MenuItem("Flash");
-        flashItem.setOnAction(event -> flash());
 
-        actionsMenu.getItems().addAll(damagePersonItem, pushAttackItem, abortItem,
-                new SeparatorMenuItem(), flashItem, simpleStunDamage, simpleStunHeal);
+        actionsMenu.getItems().addAll(damagePersonItem, pushAttackItem, abortItem, flashItem,
+                new SeparatorMenuItem(), simpleStunDamage, simpleStunHeal);
 
         return actionsMenu;
     }
@@ -290,10 +291,11 @@ public class Main extends Application {
     private void damagePerson() {
         if (selectedCombatant == null) return;
 
-        Dialog<Combatant> dialog = DamagePersonDialog.init(selectedCombatant);
+        Dialog<Pair<Integer, Integer>> dialog = DamagePersonDialog.init(selectedCombatant);
 
-        Optional<Combatant> result = dialog.showAndWait();
+        Optional<Pair<Integer, Integer>> result = dialog.showAndWait();
         if (result.isPresent()) {
+            selectedCombatant.damage(result.get().getKey(), result.get().getValue());
         }
     }
 
@@ -645,7 +647,7 @@ public class Main extends Application {
                 }
         });*/
 
-        result.getColumns().addAll(name, stun, currStun, rec, con, body, currBody);
+        result.getColumns().addAll(name, currStun, stun, rec, con, body, currBody);
 
         return result;
     }

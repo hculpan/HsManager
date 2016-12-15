@@ -21,7 +21,7 @@ public class HsMgrModel {
 
     public ObservableList<Combatant> allCombatants = FXCollections.observableArrayList();
 
-    public StringProperty currentTurn = new SimpleStringProperty("1");
+    public StringProperty currentTurn = new SimpleStringProperty("0");
 
     public StringProperty currentSegment = new SimpleStringProperty("11");
 
@@ -142,8 +142,9 @@ public class HsMgrModel {
                 c.postSegment12();
             }
 
-            currTurn++;
             currSeg -= 12;
+        } else if (currSeg == 12) {
+            currTurn++;
         }
 
         currentSegment.setValue(Integer.toString(currSeg));
