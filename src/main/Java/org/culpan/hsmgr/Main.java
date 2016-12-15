@@ -30,6 +30,7 @@ import javax.xml.bind.*;
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 
@@ -177,33 +178,57 @@ public class Main extends Application {
         editMenu.getItems().addAll(addPersonItem, addMinionsItem, editPersonItem,
                 new SeparatorMenuItem(), deletePersonItem, deleteNonPlayersItem, deleteAllItem);
 
-        Menu actionsMenu = createActionsMenu();
+        Menu actionsMenu = new Menu("Actions");
+        actionsMenu.getItems().addAll(createActionsMenu());
 
         result.getMenus().addAll(fileMenu, editMenu, actionsMenu);
 
         return result;
     }
 
-    private Menu createActionsMenu() {
-        Menu actionsMenu = new Menu("Actions");
+    private List<MenuItem> createActionsMenu() {
+        return createActionsMenu(null);
+    }
+
+    private List<MenuItem> createActionsMenu(Combatant c) {
         MenuItem damagePersonItem = new MenuItem("Damage Person");
         damagePersonItem.setOnAction(event -> damagePerson());
+
         MenuItem pushAttackItem = new MenuItem("Push Attack");
         pushAttackItem.setOnAction(event -> pushAttack(selectedCombatant));
-        abortItem = new MenuItem("Abort");
-        abortItem.setOnAction(event -> abort());
+
+        if (c == null || c.canAbort(hsMgrModel.getCurrentSegement())) {
+            abortItem = new MenuItem("Abort");
+            abortItem.setOnAction(event -> abort());
+        }
+
         MenuItem flashItem = new MenuItem("Flash");
         flashItem.setOnAction(event -> flash());
 
         MenuItem simpleStunDamage = new MenuItem("Damage Stun");
         simpleStunDamage.setOnAction( event -> damageStun() );
+
+        MenuItem simpleBodyDamage = new MenuItem("Damage Body");
+        simpleBodyDamage.setOnAction( event -> damageBody() );
+
         MenuItem simpleStunHeal = new MenuItem("Heal Stun");
         simpleStunHeal.setOnAction( event -> healStun() );
 
-        actionsMenu.getItems().addAll(damagePersonItem, pushAttackItem, abortItem, flashItem,
-                new SeparatorMenuItem(), simpleStunDamage, simpleStunHeal);
+        MenuItem simpleBodyHeal = new MenuItem("Heal Body");
+        simpleBodyHeal.setOnAction( event -> healBody() );
 
-        return actionsMenu;
+        List<MenuItem> result = new ArrayList<>();
+        result.add(damagePersonItem);
+        result.add(pushAttackItem);
+        result.add(abortItem);
+        result.add(flashItem);
+        result.add(new SeparatorMenuItem());
+        result.add(simpleStunDamage);
+        result.add(simpleBodyDamage);
+        result.add(simpleStunHeal);
+        result.add(simpleBodyHeal);
+
+        return result;
     }
 
     private void flash() {
@@ -249,7 +274,8 @@ public class Main extends Application {
 
         TextInputDialog dlg = new TextInputDialog();
         dlg.setTitle("Stun Heal");
-        dlg.setHeaderText("Heal stun damage on " + selectedCombatant.getName() + ":");
+        dlg.setHeaderText(String.format(selectedCombatant.getName() + " has %1$d STUN out of %2$d.",
+                selectedCombatant.getCurrentStun(), selectedCombatant.getStun()));
         dlg.setContentText("Heal Stun:");
 
         final Button okButton = (Button) dlg.getDialogPane().lookupButton(ButtonType.OK);
@@ -261,6 +287,26 @@ public class Main extends Application {
 
         Optional<String> numText = dlg.showAndWait();
         numText.ifPresent(value -> selectedCombatant.heal(Integer.parseInt(value), 0));
+    }
+
+    private void healBody() {
+        if (selectedCombatant == null || selectedCombatant.getBody() == selectedCombatant.getCurrentBody()) return;
+
+        TextInputDialog dlg = new TextInputDialog();
+        dlg.setTitle("Stun Body");
+        dlg.setHeaderText(String.format(selectedCombatant.getName() + " has %1$d BODY out of %2$d.",
+                selectedCombatant.getCurrentBody(), selectedCombatant.getBody()));
+        dlg.setContentText("Heal Body:");
+
+        final Button okButton = (Button) dlg.getDialogPane().lookupButton(ButtonType.OK);
+        okButton.setDisable(true);
+
+        dlg.getEditor().textProperty().addListener((observable, oldValue, newValue) -> {
+            okButton.setDisable(!newValue.matches("\\d+"));
+        });
+
+        Optional<String> numText = dlg.showAndWait();
+        numText.ifPresent(value -> selectedCombatant.heal(0, Integer.parseInt(value)));
     }
 
     private void damageStun() {
@@ -280,6 +326,25 @@ public class Main extends Application {
 
         Optional<String> numText = dlg.showAndWait();
         numText.ifPresent(value -> hsMgrModel.damage(selectedCombatant, Integer.parseInt(value), 0));
+    }
+
+    private void damageBody() {
+        if (selectedCombatant == null) return;
+
+        TextInputDialog dlg = new TextInputDialog();
+        dlg.setTitle("Body Damage");
+        dlg.setHeaderText("Do BODY damage to " + selectedCombatant.getName() + ":");
+        dlg.setContentText("Damage (no defenses apply):");
+
+        final Button okButton = (Button) dlg.getDialogPane().lookupButton(ButtonType.OK);
+        okButton.setDisable(true);
+
+        dlg.getEditor().textProperty().addListener((observable, oldValue, newValue) -> {
+            okButton.setDisable(!newValue.matches("\\d+"));
+        });
+
+        Optional<String> numText = dlg.showAndWait();
+        numText.ifPresent(value -> hsMgrModel.damage(selectedCombatant, 0, Integer.parseInt(value)));
     }
 
     private void pushAttack(Combatant selectedCombatant) {
@@ -456,6 +521,14 @@ public class Main extends Application {
         rootPane.setVgrow(root, Priority.ALWAYS);
         primaryStage.setTitle("Hero System Manager");
         //primaryStage.setResizable(false);
+        tableView = buildTableView();
+        tableView.setOnMouseClicked(event -> {
+            if (event.getButton().equals(MouseButton.SECONDARY)) {
+                ContextMenu tableContextMenu = new ContextMenu();
+                tableContextMenu.getItems().addAll(createActionsMenu(selectedCombatant));
+                tableContextMenu.show(tableView, event.getScreenX(), event.getScreenY());
+            }
+        });
         rootPane.getChildren().addAll(createMenu(), root);
         Scene scene = new Scene(rootPane, 1000, 800);
         primaryStage.setScene(scene);
@@ -540,7 +613,6 @@ public class Main extends Application {
             }
         });
 
-        tableView = buildTableView();
         tableView.getSelectionModel().selectedItemProperty().addListener((observableValue, oldValue, newValue) -> {
             //Check whether item is selected and set value of selected item to Label
             if(tableView.getSelectionModel().getSelectedItem() != null) {
