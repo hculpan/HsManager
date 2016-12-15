@@ -344,11 +344,28 @@ public class Combatant {
         if (currentStun.get() <= 0) {
             conStunnedAwaitingRecovery = false;
             status.set(Status.unconscious);
-        } else if (stun > getCon() && !isConStunned()) {
+        } else if (stun > getCon()) {
+            stun();
+        }
+        this.currentBody.setValue(this.currentBody.getValue() - body);
+    }
+
+    public void stun() {
+        if (!isConStunned()) {
             conStunnedAwaitingRecovery = (!hasHeldAction() && !isActive());
             status.set(Status.conStunned);
         }
-        this.currentBody.setValue(this.currentBody.getValue() - body);
+    }
+
+    public void unstun() {
+        if (isConStunned()) {
+            if (conStunnedAwaitingRecovery) {
+                status.set(Status.unacted);
+            } else {
+                status.set(Status.heldAction);
+            }
+            conStunnedAwaitingRecovery = false;
+        }
     }
 
     public void heal(int stun) {
@@ -439,12 +456,12 @@ public class Combatant {
     }
 
     public void abort(int currPhase) {
-        status.set(Status.aborted);
-        if (isActive()) {
+        if (isActive() || hasHeldAction()) {
             abortSegment = currPhase;
         } else {
             abortSegment = 0;
         }
+        status.set(Status.aborted);
     }
 
 

@@ -217,6 +217,12 @@ public class Main extends Application {
         MenuItem simpleBodyHeal = new MenuItem("Heal Body");
         simpleBodyHeal.setOnAction( event -> healBody() );
 
+        MenuItem stunItem = new MenuItem("Stun Combatant");
+        stunItem.setOnAction(event -> stun());
+
+        MenuItem unstunItem = new MenuItem("Unstun Combatant");
+        unstunItem.setOnAction(event -> unstun());
+
         List<MenuItem> result = new ArrayList<>();
         result.add(damagePersonItem);
         result.add(pushAttackItem);
@@ -227,8 +233,26 @@ public class Main extends Application {
         result.add(simpleBodyDamage);
         result.add(simpleStunHeal);
         result.add(simpleBodyHeal);
+        result.add(new SeparatorMenuItem());
+        result.add(stunItem);
+        result.add(unstunItem);
 
         return result;
+    }
+
+    private void stun() {
+        if (selectedCombatant == null || selectedCombatant.isUnconscious()) return;
+
+        selectedCombatant.stun();
+        if (selectedCombatant.isActive()) {
+            hsMgrModel.updateActiveList(true);
+        }
+    }
+
+    private void unstun() {
+        if (selectedCombatant == null || selectedCombatant.isUnconscious()) return;
+
+        selectedCombatant.unstun();
     }
 
     private void flash() {
@@ -623,6 +647,11 @@ public class Main extends Application {
                 selectedCombatant = hsMgrModel.getCombatantByName(val.toString());
             }
         });
+
+//        SplitPane splitPane = new SplitPane();
+//        splitPane.getItems().add(active);
+//        splitPane.getItems().addAll(tableView);
+//        root.setCenter(splitPane);
 
         root.setCenter(tableView);
         root.setLeft(active);

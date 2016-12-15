@@ -27,6 +27,8 @@ public class DamagePersonDialog<T> extends Dialog<Pair<Integer, Integer>> {
 
     static Label diceOutput;
 
+    static Label conStunnedOutput;
+
     final static int NND = Integer.MAX_VALUE;
 
     final static int NO_DEF_FULL_BODY = 0;
@@ -144,6 +146,9 @@ public class DamagePersonDialog<T> extends Dialog<Pair<Integer, Integer>> {
 
         stunOutputField = new TextField();
         grid.add(buildResponseField("Stun: ", stunOutputField), 1, 2);
+        conStunnedOutput = new Label();
+        conStunnedOutput.setAlignment(Pos.CENTER);
+        grid.add(conStunnedOutput, 1, 3);
         bodyOutputField = new TextField();
         grid.add(buildResponseField("Body: ", bodyOutputField), 1, 4);
         kbOutputField = new TextField();
@@ -168,13 +173,14 @@ public class DamagePersonDialog<T> extends Dialog<Pair<Integer, Integer>> {
         kbBox.getChildren().addAll(kb1diceRButton, kb2diceRButton, kb3diceRButton);
         grid.add(kbBox, 1, 7);
 
-        grid.add(buildDiceButton(8, selectedCombatant), 2, 0);
+        grid.add(buildDiceButton(9, selectedCombatant), 2, 0);
         grid.add(buildDiceButton(10, selectedCombatant), 2, 1);
-        grid.add(buildDiceButton(12, selectedCombatant), 2, 2);
-        grid.add(buildDiceButton(14, selectedCombatant), 2, 3);
-        grid.add(buildDiceButton(16, selectedCombatant), 2, 4);
-        grid.add(buildDiceButton(18, selectedCombatant), 2, 5);
-        grid.add(buildDiceButton(20, selectedCombatant), 2, 6);
+        grid.add(buildDiceButton(11, selectedCombatant), 2, 2);
+        grid.add(buildDiceButton(12, selectedCombatant), 2, 3);
+        grid.add(buildDiceButton(14, selectedCombatant), 2, 4);
+        grid.add(buildDiceButton(16, selectedCombatant), 2, 5);
+        grid.add(buildDiceButton(18, selectedCombatant), 2, 6);
+        grid.add(buildDiceButton(20, selectedCombatant), 2, 7);
 
         borderPane.setCenter(grid);
 
@@ -241,6 +247,12 @@ public class DamagePersonDialog<T> extends Dialog<Pair<Integer, Integer>> {
         msg.append("] Avg = ");
         msg.append(String.format("%1$.1f", ((float)stunTotal / (float)lastDice.length)));
         diceOutput.setText(msg.toString());
+
+        if (stunDamage > combatant.getCon()) {
+            conStunnedOutput.setText("will be CON stunned");
+        } else {
+            conStunnedOutput.setText("");
+        }
 
         displayKnockback();
     }
