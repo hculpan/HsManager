@@ -187,20 +187,14 @@ public class Main extends Application {
     }
 
     private List<MenuItem> createActionsMenu() {
-        return createActionsMenu(null);
-    }
-
-    private List<MenuItem> createActionsMenu(Combatant c) {
         MenuItem damagePersonItem = new MenuItem("Damage Person");
         damagePersonItem.setOnAction(event -> damagePerson());
 
         MenuItem pushAttackItem = new MenuItem("Push Attack");
         pushAttackItem.setOnAction(event -> pushAttack(selectedCombatant));
 
-        if (c == null || c.canAbort(hsMgrModel.getCurrentSegement())) {
-            abortItem = new MenuItem("Abort");
-            abortItem.setOnAction(event -> abort());
-        }
+        abortItem = new MenuItem("Abort");
+        abortItem.setOnAction(event -> abort());
 
         MenuItem flashItem = new MenuItem("Flash");
         flashItem.setOnAction(event -> flash());
@@ -546,13 +540,6 @@ public class Main extends Application {
         primaryStage.setTitle("Hero System Manager");
         //primaryStage.setResizable(false);
         tableView = buildTableView();
-        tableView.setOnMouseClicked(event -> {
-            if (event.getButton().equals(MouseButton.SECONDARY)) {
-                ContextMenu tableContextMenu = new ContextMenu();
-                tableContextMenu.getItems().addAll(createActionsMenu(selectedCombatant));
-                tableContextMenu.show(tableView, event.getScreenX(), event.getScreenY());
-            }
-        });
         rootPane.getChildren().addAll(createMenu(), root);
         Scene scene = new Scene(rootPane, 1000, 800);
         primaryStage.setScene(scene);
@@ -749,6 +736,10 @@ public class Main extends Application {
         });*/
 
         result.getColumns().addAll(name, currStun, stun, rec, con, body, currBody);
+
+        ContextMenu contextMenu = new ContextMenu();
+        contextMenu.getItems().addAll(createActionsMenu());
+        result.setContextMenu(contextMenu);
 
         return result;
     }

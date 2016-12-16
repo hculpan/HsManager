@@ -29,6 +29,8 @@ public class DamagePersonDialog<T> extends Dialog<Pair<Integer, Integer>> {
 
     static Label conStunnedOutput;
 
+    static Label rawTotalsOutput;
+
     final static int NND = Integer.MAX_VALUE;
 
     final static int NO_DEF_FULL_BODY = 0;
@@ -112,19 +114,19 @@ public class DamagePersonDialog<T> extends Dialog<Pair<Integer, Integer>> {
         RadioButton normalButton = new RadioButton("Normal Damage");
         normalButton.setToggleGroup(damageTypeGroup);
         normalButton.setSelected(true);
-        grid.add(normalButton, 0, 0);
+        grid.add(normalButton, 0, 1);
         RadioButton killingButton = new RadioButton("Killing Damage");
         killingButton.setToggleGroup(damageTypeGroup);
         killingButton.setDisable(true);
-        grid.add(killingButton, 0, 1);
+        grid.add(killingButton, 0, 2);
 
         defensesToggleGroup = new ToggleGroup();
-        grid.add(buildRadioButton("Full PD [" + selectedCombatant.getPd() + "]", defensesToggleGroup, true), 0, 2);
-        grid.add(buildRadioButton("Full ED [" + selectedCombatant.getEd() + "]", defensesToggleGroup), 0, 3);
-        grid.add(buildRadioButton("Half PD [" + Math.round((selectedCombatant.getPd()/2.0) + 0.1) + "]", defensesToggleGroup), 0, 4);
-        grid.add(buildRadioButton("Half ED [" + Math.round((selectedCombatant.getPd()/2.0) + 0.1) + "]", defensesToggleGroup), 0, 5);
-        grid.add(buildRadioButton("NND [0]", defensesToggleGroup), 0, 6);
-        grid.add(buildRadioButton("No Def - Full Body [0]", defensesToggleGroup), 0, 7);
+        grid.add(buildRadioButton("Full PD [" + selectedCombatant.getPd() + "]", defensesToggleGroup, true), 0, 3);
+        grid.add(buildRadioButton("Full ED [" + selectedCombatant.getEd() + "]", defensesToggleGroup), 0, 4);
+        grid.add(buildRadioButton("Half PD [" + Math.round((selectedCombatant.getPd()/2.0) + 0.1) + "]", defensesToggleGroup), 0, 5);
+        grid.add(buildRadioButton("Half ED [" + Math.round((selectedCombatant.getPd()/2.0) + 0.1) + "]", defensesToggleGroup), 0, 6);
+        grid.add(buildRadioButton("NND [0]", defensesToggleGroup), 0, 7);
+        grid.add(buildRadioButton("No Def - Full Body [0]", defensesToggleGroup), 0, 8);
 
         HBox customDmgBox = new HBox();
         Label customDmgLabel = new Label("Custom Dmg: ");
@@ -138,21 +140,24 @@ public class DamagePersonDialog<T> extends Dialog<Pair<Integer, Integer>> {
         });
         rollButton.setOnAction(event -> rollDamage(Integer.parseInt(customDmgField.getText()), selectedCombatant));
         customDmgBox.getChildren().addAll(customDmgLabel, customDmgField, rollButton);
-        grid.add(customDmgBox, 1, 0);
+        grid.add(customDmgBox, 1, 1);
 
         diceOutput = new Label();
         diceOutput.setAlignment(Pos.CENTER);
-        grid.add(diceOutput, 1, 1);
+        grid.add(diceOutput, 1, 0, 2, 1);
 
-        stunOutputField = new TextField();
-        grid.add(buildResponseField("Stun: ", stunOutputField), 1, 2);
         conStunnedOutput = new Label();
         conStunnedOutput.setAlignment(Pos.CENTER);
-        grid.add(conStunnedOutput, 1, 3);
+        grid.add(conStunnedOutput, 1, 2);
+        stunOutputField = new TextField();
+        grid.add(buildResponseField("Stun: ", stunOutputField), 1, 3);
+        rawTotalsOutput = new Label();
+        rawTotalsOutput.setAlignment(Pos.CENTER);
+        grid.add(rawTotalsOutput, 1, 4);
         bodyOutputField = new TextField();
-        grid.add(buildResponseField("Body: ", bodyOutputField), 1, 4);
+        grid.add(buildResponseField("Body: ", bodyOutputField), 1, 5);
         kbOutputField = new TextField();
-        grid.add(buildResponseField("KB: ", kbOutputField), 1, 6);
+        grid.add(buildResponseField("KB: ", kbOutputField), 1, 7);
 
         kbToggleGroup = new ToggleGroup();
         RadioButton kb1diceRButton = new RadioButton("1d6  ");
@@ -171,16 +176,16 @@ public class DamagePersonDialog<T> extends Dialog<Pair<Integer, Integer>> {
         HBox kbBox = new HBox();
         kbBox.setAlignment(Pos.CENTER);
         kbBox.getChildren().addAll(kb1diceRButton, kb2diceRButton, kb3diceRButton);
-        grid.add(kbBox, 1, 7);
+        grid.add(kbBox, 1, 8);
 
-        grid.add(buildDiceButton(9, selectedCombatant), 2, 0);
-        grid.add(buildDiceButton(10, selectedCombatant), 2, 1);
-        grid.add(buildDiceButton(11, selectedCombatant), 2, 2);
-        grid.add(buildDiceButton(12, selectedCombatant), 2, 3);
-        grid.add(buildDiceButton(14, selectedCombatant), 2, 4);
-        grid.add(buildDiceButton(16, selectedCombatant), 2, 5);
-        grid.add(buildDiceButton(18, selectedCombatant), 2, 6);
-        grid.add(buildDiceButton(20, selectedCombatant), 2, 7);
+        grid.add(buildDiceButton(9, selectedCombatant), 2, 1);
+        grid.add(buildDiceButton(10, selectedCombatant), 2, 2);
+        grid.add(buildDiceButton(11, selectedCombatant), 2, 3);
+        grid.add(buildDiceButton(12, selectedCombatant), 2, 4);
+        grid.add(buildDiceButton(14, selectedCombatant), 2, 5);
+        grid.add(buildDiceButton(16, selectedCombatant), 2, 6);
+        grid.add(buildDiceButton(18, selectedCombatant), 2, 7);
+        grid.add(buildDiceButton(20, selectedCombatant), 2, 8);
 
         borderPane.setCenter(grid);
 
@@ -231,6 +236,8 @@ public class DamagePersonDialog<T> extends Dialog<Pair<Integer, Integer>> {
             bodyDamage = (bodyTotal - defense > 0 ? bodyTotal - defense : 0);
         }
         int stunDamage = (stunTotal - defense > 0 ? stunTotal - defense : 0);
+
+        rawTotalsOutput.setText(String.format("Total: %1$d stun, %2$d body", stunTotal, bodyTotal));
 
         finalStunDamage = stunDamage;
         finalBodyDamage = bodyDamage;
