@@ -19,7 +19,7 @@ import java.util.Random;
 public class HsMgrModel {
     public ObservableList<Combatant> currentActive = FXCollections.observableArrayList(Combatant.listExtractor());
 
-    public ObservableList<Combatant> allCombatants = FXCollections.observableArrayList();
+    public ObservableList<Combatant> allCombatants = FXCollections.observableArrayList(Combatant.extractor());
 
     public StringProperty currentTurn = new SimpleStringProperty("0");
 

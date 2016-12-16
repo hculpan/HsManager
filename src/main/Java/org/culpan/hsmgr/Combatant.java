@@ -33,27 +33,27 @@ public class Combatant {
             { 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12 } };
 
 
-    String name;
+    StringProperty name = new SimpleStringProperty();
 
-    int con;
+    IntegerProperty con = new SimpleIntegerProperty();
 
-    int dex;
+    IntegerProperty dex = new SimpleIntegerProperty();
 
-    int rec;
+    IntegerProperty rec = new SimpleIntegerProperty();
 
-    int stun;
+    IntegerProperty stun = new SimpleIntegerProperty();
 
-    int body;
+    IntegerProperty body = new SimpleIntegerProperty();
 
-    int pd;
+    IntegerProperty pd = new SimpleIntegerProperty();
 
-    int ed;
+    IntegerProperty ed = new SimpleIntegerProperty();
 
-    int spd;
+    IntegerProperty spd = new SimpleIntegerProperty();
 
-    int dcv;
+    IntegerProperty dcv = new SimpleIntegerProperty();
 
-    boolean player;
+    BooleanProperty player = new SimpleBooleanProperty(false);
 
     volatile boolean conStunnedAwaitingRecovery = false;
 
@@ -100,101 +100,101 @@ public class Combatant {
 
     @XmlElement
     public String getName() {
-        return name;
+        return name.get();
     }
 
     public void setName(String name) {
-        this.name = name;
+        this.name.set(name);
     }
 
     @XmlElement
     public int getCon() {
-        return con;
+        return con.get();
     }
 
     public void setCon(int con) {
-        this.con = con;
+        this.con.set(con);
     }
 
     @XmlElement
     public int getDex() {
-        return dex;
+        return dex.get();
     }
 
     public void setDex(int dex) {
-        this.dex = dex;
+        this.dex.set(dex);
     }
 
     @XmlElement
     public int getRec() {
-        return rec;
+        return rec.get();
     }
 
     public void setRec(int rec) {
-        this.rec = rec;
+        this.rec.set(rec);
     }
 
     @XmlElement
     public int getStun() {
-        return stun;
+        return stun.get();
     }
 
     public void setStun(int stun) {
-        this.stun = stun;
+        this.stun.set(stun);
     }
 
     @XmlElement
     public int getBody() {
-        return body;
+        return body.get();
     }
 
     public void setBody(int body) {
-        this.body = body;
+        this.body.set(body);
     }
 
     @XmlElement
     public int getPd() {
-        return pd;
+        return pd.get();
     }
 
     public void setPd(int pd) {
-        this.pd = pd;
+        this.pd.set(pd);
     }
 
     @XmlElement
     public int getEd() {
-        return ed;
+        return ed.get();
     }
 
     public void setEd(int ed) {
-        this.ed = ed;
+        this.ed.set(ed);
     }
 
     @XmlElement
     public int getSpd() {
-        return spd;
+        return spd.get();
     }
 
     public void setSpd(int spd) {
-        this.spd = spd;
+        this.spd.set(spd);
     }
 
     @XmlElement
     public int getDcv() {
-        return dcv;
+        return dcv.get();
     }
 
     public void setDcv(int dcv) {
-        this.dcv = dcv;
+        this.dcv.set(dcv);
     }
 
     @XmlElement
     public boolean isPlayer() {
-        return player;
+        return player.get();
     }
 
     public void setPlayer(boolean player) {
-        this.player = player;
+        this.player.set(player);
     }
 
     @XmlTransient
@@ -273,19 +273,19 @@ public class Combatant {
         Combatant c = new Combatant();
         c.status.setValue(Status.unacted);
 
-        c.name = name;
-        c.con = con;
-        c.dex = dex;
-        c.rec = rec;
-        c.body = body;
-        c.stun = stun;
-        c.spd = spd;
-        c.pd = pd;
-        c.ed = ed;
-        c.dcv = dcv;
+        c.name.set(name);
+        c.con.set(con);
+        c.dex.set(dex);
+        c.rec.set(rec);
+        c.body.set(body);
+        c.stun.set(stun);
+        c.spd.set(spd);
+        c.pd.set(pd);
+        c.ed.set(ed);
+        c.dcv.set(dcv);
         c.currentBody.setValue(body);
         c.currentStun.setValue(stun);
-        c.player = player;
+        c.player.set(player);
 
         return c;
     }
@@ -464,8 +464,13 @@ public class Combatant {
         status.set(Status.aborted);
     }
 
-
     public void reduceFlash() {
         if (flashed > 0) flashed--;
+    }
+
+    public static Callback<Combatant, Observable[]> extractor() {
+        return (Combatant c) -> new Observable[]{
+                c.name, c.con, c.dex, c.rec, c.stun, c.body, c.pd, c.ed, c.dcv, c.player
+        };
     }
 }

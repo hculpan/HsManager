@@ -151,13 +151,13 @@ public class Main extends Application {
 
         Menu editMenu = new Menu("Edit");
         MenuItem addPersonItem = new MenuItem("Add Person");
-        addPersonItem.setOnAction(event -> addPerson(null));
+        addPersonItem.setOnAction(event -> addPerson());
         MenuItem addMinionsItem = new MenuItem("Add Minions");
         addMinionsItem.setOnAction(event -> addMinions());
         MenuItem editPersonItem = new MenuItem("Edit Person");
         editPersonItem.setOnAction(event -> {
             if (selectedCombatant != null) {
-                addPerson(selectedCombatant);
+                editPerson(selectedCombatant);
             }
         });
         MenuItem deletePersonItem = new MenuItem("Delete Person");
@@ -480,24 +480,49 @@ public class Main extends Application {
         }
     }
 
-    protected void addPerson(Combatant c) {
+    protected void addPerson() {
         Dialog<Combatant> dialog;
 
-        if (c == null) {
-            dialog = AddPersonDialog.init(c, "Add Person");
-        } else {
-            dialog = AddPersonDialog.init(c, "Edit Person");
+        dialog = AddPersonDialog.init(null, "Add Person");
+
+        Optional<Combatant> result = dialog.showAndWait();
+        if (result.isPresent()) {
+            hsMgrModel.allCombatants.add(result.get());
+            selectedCombatant = result.get();
         }
+    }
+
+    protected void editPerson(Combatant c) {
+        if (c == null) return;
+
+        Dialog<Combatant> dialog;
+
+        dialog = AddPersonDialog.init(c, "Edit Person");
 
         Optional<Combatant> result = dialog.showAndWait();
         if (result.isPresent()) {
             if (c != null && hsMgrModel.allCombatants.contains(c)) {
                 int index = hsMgrModel.allCombatants.indexOf(c);
-                hsMgrModel.allCombatants.set(index, result.get());
-            } else {
-                hsMgrModel.allCombatants.add(result.get());
+                Combatant updated = result.get();
+                c.setName(updated.getName());
+                c.setCon(updated.getCon());
+                c.setDex(updated.getDex());
+                c.setRec(updated.getRec());
+                c.setPd(updated.getPd());
+                c.setEd(updated.getEd());
+                c.setDcv(updated.getDcv());
+
+                c.setStun(updated.getStun());
+                if (c.getCurrentStun() > updated.getStun()) {
+                    c.currentStun.set(updated.getStun());
+                }
+
+                c.setBody(updated.getBody());
+                if (c.getCurrentBody() > updated.getBody()) {
+                    c.currentBody.set(updated.getBody());
+                }
+                hsMgrModel.updateActiveList(false);
             }
-            selectedCombatant = result.get();
         }
     }
 
