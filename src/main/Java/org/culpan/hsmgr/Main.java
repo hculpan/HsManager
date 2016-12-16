@@ -378,7 +378,7 @@ public class Main extends Application {
 
         Optional<Pair<Integer, Integer>> result = dialog.showAndWait();
         if (result.isPresent()) {
-            selectedCombatant.damage(result.get().getKey(), result.get().getValue());
+            hsMgrModel.damage(selectedCombatant, result.get().getKey(), result.get().getValue());
         }
     }
 
