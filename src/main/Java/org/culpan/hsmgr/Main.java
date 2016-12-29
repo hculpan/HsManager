@@ -521,6 +521,11 @@ public class Main extends Application {
                 if (c.getCurrentBody() > updated.getBody()) {
                     c.currentBody.set(updated.getBody());
                 }
+
+                tableView.getSelectionModel().clearSelection();
+                hsMgrModel.allCombatants.remove(index);
+                hsMgrModel.allCombatants.add(c);
+
                 hsMgrModel.updateActiveList(false);
             }
         }

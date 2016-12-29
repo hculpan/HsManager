@@ -313,6 +313,11 @@ public class Combatant {
         result.status.set(this.status.get());
         result.currentBody.setValue(this.currentBody.getValue());
         result.currentStun.setValue(this.currentStun.getValue());
+        result.conStunnedAwaitingRecovery = this.conStunnedAwaitingRecovery;
+        result.abortSegment = this.abortSegment;
+        result.turnsUnconscious = this.turnsUnconscious;
+        result.active.set(this.active.get());
+        result.flashed = this.flashed;
 
         return result;
     }
@@ -469,7 +474,7 @@ public class Combatant {
     }
 
     public static Callback<Combatant, Observable[]> extractor() {
-        return (Combatant c) -> new Observable[]{
+        return (Combatant c) -> new Observable[] {
                 c.name, c.con, c.dex, c.rec, c.stun, c.body, c.pd, c.ed, c.dcv, c.player
         };
     }
